@@ -145,7 +145,7 @@ DEFAULT_CONFIG = {
 
 ## 7. 后续事项
 
-- [ ] 实施 `server/` 代码改造
-- [ ] 更新 `.env.example` 与 `docker-compose.yaml`
+- [x] 实施 `server/` 代码改造
+- [x] 更新 `.env.example` 与 `docker-compose.yaml`
 - [ ] 在 hk-vps 远端部署并验证
 - [ ] 考虑后续是否映射 DeepSeek thinking 模式

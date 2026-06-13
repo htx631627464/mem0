@@ -35,7 +35,7 @@
 - Create: `server/tests/test_server_config.py`
 - Modify: `server/main.py`
 
-- [ ] **Step 1: 创建最小测试文件**
+- [x] **Step 1: 创建最小测试文件**
 
 ```python
 # server/tests/test_server_config.py
@@ -100,7 +100,7 @@ def test_embedding_dims_can_be_overridden():
     assert config["vector_store"]["config"]["embedding_model_dims"] == 1024
 ```
 
-- [ ] **Step 2: 运行测试确认当前失败**
+- [x] **Step 2: 运行测试确认当前失败**
 
 Run:
 
@@ -111,7 +111,7 @@ python -m pytest tests/test_server_config.py -v
 
 Expected: FAIL（当前 `main.py` 尚未实现新的默认配置逻辑）。
 
-- [ ] **Step 3: 在 `server/main.py` 增加测试入口保护**
+- [x] **Step 3: 在 `server/main.py` 增加测试入口保护**
 
 ```python
 # server/main.py 顶部附近
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     uvicorn.run("server.main:app", host="0.0.0.0", port=8000, reload=True)
 ```
 
-- [ ] **Step 4: 运行测试确认语法通过**
+- [x] **Step 4: 运行测试确认语法通过**
 
 Run:
 
@@ -132,7 +132,7 @@ python -m pytest tests/test_server_config.py -v
 
 Expected: 仍 FAIL，但文件可被 pytest 正常收集。
 
-- [ ] **Step 5: 提交测试骨架**
+- [x] **Step 5: 提交测试骨架**
 
 ```bash
 git add server/tests/test_server_config.py server/main.py
@@ -146,14 +146,14 @@ git commit -m "test(server): add config smoke tests for DeepSeek + Bailian desig
 **Files:**
 - Modify: `server/main.py`
 
-- [ ] **Step 1: 扩展 bundled providers**
+- [x] **Step 1: 扩展 bundled providers**
 
 ```python
 # server/main.py:60
 BUNDLED_LLM_PROVIDERS = ("openai", "anthropic", "gemini", "deepseek")
 ```
 
-- [ ] **Step 2: 增加环境变量读取**
+- [x] **Step 2: 增加环境变量读取**
 
 ```python
 # server/main.py:113-117 附近
@@ -170,7 +170,7 @@ MEM0_DEFAULT_EMBEDDING_MODEL = os.environ.get("MEM0_DEFAULT_EMBEDDING_MODEL", "t
 MEM0_DEFAULT_EMBEDDING_DIMS = int(os.environ.get("MEM0_DEFAULT_EMBEDDING_DIMS", "1536"))
 ```
 
-- [ ] **Step 3: 替换默认配置构建逻辑**
+- [x] **Step 3: 替换默认配置构建逻辑**
 
 ```python
 # server/main.py:118-137
@@ -209,7 +209,7 @@ DEFAULT_CONFIG = {
 }
 ```
 
-- [ ] **Step 4: 保持 config redaction 不泄露敏感字段**
+- [x] **Step 4: 保持 config redaction 不泄露敏感字段**
 
 Run:
 
@@ -220,7 +220,7 @@ python -m pytest tests/test_server_config.py -v
 
 Expected: PASS。
 
-- [ ] **Step 5: 提交实现**
+- [x] **Step 5: 提交实现**
 
 ```bash
 git add server/main.py
@@ -235,7 +235,7 @@ git commit -m "feat(server): switch default LLM to DeepSeek and embedder to Dash
 - Modify: `server/.env.example`
 - Modify: `server/docker-compose.yaml`
 
-- [ ] **Step 1: 更新 `.env.example`**
+- [x] **Step 1: 更新 `.env.example`**
 
 ```env
 # DeepSeek LLM
@@ -253,7 +253,7 @@ MEM0_DEFAULT_EMBEDDING_DIMS=1536
 OPENAI_API_KEY=
 ```
 
-- [ ] **Step 2: 在 `docker-compose.yaml` 中透传变量**
+- [x] **Step 2: 在 `docker-compose.yaml` 中透传变量**
 
 ```yaml
 # server/docker-compose.yaml mem0 service environment
@@ -276,7 +276,7 @@ environment:
   - OPENAI_API_KEY=${OPENAI_API_KEY:-}
 ```
 
-- [ ] **Step 3: 本地检查 compose 语法**
+- [x] **Step 3: 本地检查 compose 语法**
 
 Run:
 
@@ -287,7 +287,7 @@ docker compose config -q
 
 Expected: 无报错输出。
 
-- [ ] **Step 4: 提交配置变更**
+- [x] **Step 4: 提交配置变更**
 
 ```bash
 git add server/.env.example server/docker-compose.yaml
@@ -302,7 +302,7 @@ git commit -m "docs(server): expose DeepSeek and DashScope env config"
 - No new files
 - Verify: `server/main.py`, `server/tests/test_server_config.py`
 
-- [ ] **Step 1: 运行单测**
+- [x] **Step 1: 运行单测**
 
 Run:
 
@@ -313,7 +313,7 @@ python -m pytest tests/test_server_config.py -v
 
 Expected: PASS。
 
-- [ ] **Step 2: 运行 server lint（ruff）**
+- [x] **Step 2: 运行 server lint（ruff）**
 
 Run:
 
@@ -324,7 +324,7 @@ ruff check .
 
 Expected: 无 error。
 
-- [ ] **Step 3: 检查默认配置输出**
+- [x] **Step 3: 检查默认配置输出**
 
 Run:
 
@@ -347,7 +347,7 @@ Expected:
 - `embedder.config.model == "text-embedding-v4"`
 - `vector_store.config.embedding_model_dims == 1536`
 
-- [ ] **Step 4: 提交验证结果说明（可选）**
+- [x] **Step 4: 提交验证结果说明（可选）**
 
 ```bash
 git add dev/docs/2026-06-13-deepseek-v4-bailian-embedding-plan.md
