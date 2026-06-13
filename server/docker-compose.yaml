@@ -28,6 +28,15 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - AUTH_DISABLED=${AUTH_DISABLED:-false}
       - MEM0_TELEMETRY=${MEM0_TELEMETRY:-true}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-v4-flash}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
+      - DASHSCOPE_EMBEDDING_BASE_URL=${DASHSCOPE_EMBEDDING_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - MEM0_DEFAULT_LLM_MODEL=${MEM0_DEFAULT_LLM_MODEL:-gpt-4.1-nano-2025-04-14}
+      - MEM0_DEFAULT_EMBEDDING_MODEL=${MEM0_DEFAULT_EMBEDDING_MODEL:-text-embedding-v4}
+      - MEM0_DEFAULT_EMBEDDING_DIMS=${MEM0_DEFAULT_EMBEDDING_DIMS:-1536}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
 
   postgres:
       image: pgvector/pgvector:pg17
