@@ -58,6 +58,7 @@ def build_default_config(env: dict[str, str] | None = None) -> dict:
     embedder_config: dict = {
         "api_key": embedder_api_key,
         "model": embedder_model,
+        "embedding_dims": default_embedding_dims,
     }
     if deepseek_api_key and dashscope_api_key:
         embedder_config["openai_base_url"] = embedder_base_url
