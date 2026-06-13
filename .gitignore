@@ -8,6 +8,10 @@ __pycache__/
 server/history/
 server/.env
 
+# Local deployment credentials & notes (never commit)
+dev/docs/*credentials*.md
+dev/docs/*secret*.md
+
 # C extensions
 *.so
 
