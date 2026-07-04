@@ -25,6 +25,7 @@ import urllib.error
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _api import api_url
 from _chunking import (
     filter_and_truncate,
     split_by_headers,
@@ -33,7 +34,6 @@ from _chunking import (
 from _identity import resolve_api_key, resolve_user_id
 from _project import resolve_branch, resolve_project_id
 
-API_URL = "https://api.mem0.ai"
 HASH_STORE = os.path.expanduser("~/.mem0/import_hashes.json")
 
 
@@ -83,7 +83,7 @@ def post_memory(api_key: str, content: str, user_id: str, project_id: str, branc
     }
     data = json.dumps(body).encode("utf-8")
     req = urllib.request.Request(
-        f"{API_URL}/v3/memories/add/",
+        api_url("/v3/memories/add/"),
         data=data,
         headers={
             "Content-Type": "application/json",

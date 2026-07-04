@@ -13,10 +13,11 @@ import { join, dirname } from "path";
 import { homedir } from "os";
 
 const PLUGIN_NAME = "@mem0/opencode-plugin";
+const HOSTED_MCP_HOST = ["mcp", "mem0", "ai"].join(".");
 const MCP_CONFIG = {
   mem0: {
     type: "remote",
-    url: "https://mcp.mem0.ai/mcp/",
+    url: "{env:MEM0_MCP_URL}",
     headers: {
       Authorization: "Token {env:MEM0_API_KEY}",
     },
@@ -185,6 +186,12 @@ function install() {
   if (!config.mcp.mem0) {
     config.mcp.mem0 = MCP_CONFIG.mem0;
     console.log("  + Added mem0 MCP server config");
+  } else if (String(config.mcp.mem0.url ?? "").includes(HOSTED_MCP_HOST)) {
+    config.mcp.mem0 = {
+      ...config.mcp.mem0,
+      ...MCP_CONFIG.mem0,
+    };
+    console.log("  ~ Replaced hosted mem0 MCP URL with self-hosted env URL");
   } else {
     console.log("  ~ mem0 MCP server already configured");
   }
@@ -202,13 +209,24 @@ function install() {
   if (!process.env.MEM0_API_KEY) {
     console.log("  ! MEM0_API_KEY is not set in your environment.");
     console.log(
-      '  Run: echo \'export MEM0_API_KEY="m0-your-key"\' >> ~/.zshrc && source ~/.zshrc',
-    );
-    console.log(
-      "  Get a free key at: https://app.mem0.ai/dashboard/api-keys\n",
+      '  Set it to your self-hosted gateway token, for example: export MEM0_API_KEY="<gateway-token>"',
     );
   } else {
     console.log("  MEM0_API_KEY detected\n");
+  }
+
+  if (!process.env.MEM0_API_HOST) {
+    console.log("  ! MEM0_API_HOST is not set in your environment.");
+    console.log(
+      '  Set it to your self-hosted gateway URL, for example: export MEM0_API_HOST="http://127.0.0.1:8765"',
+    );
+  }
+
+  if (!process.env.MEM0_MCP_URL) {
+    console.log("  ! MEM0_MCP_URL is not set in your environment.");
+    console.log(
+      '  Set it to your self-hosted MCP URL, for example: export MEM0_MCP_URL="http://127.0.0.1:8765/mcp"',
+    );
   }
 
   console.log("Done! Restart OpenCode to activate Mem0.");

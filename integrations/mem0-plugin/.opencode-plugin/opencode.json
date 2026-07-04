@@ -4,7 +4,7 @@
   "mcp": {
     "mem0": {
       "type": "remote",
-      "url": "https://mcp.mem0.ai/mcp/",
+      "url": "{env:MEM0_MCP_URL}",
       "headers": {
         "Authorization": "Token {env:MEM0_API_KEY}"
       },

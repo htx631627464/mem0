@@ -75,11 +75,15 @@ Codex reads MCP servers from `~/.codex/config.toml` as TOML. Add:
 
 ```toml
 [mcp_servers.mem0]
-url = "https://mcp.mem0.ai/mcp"
+url = "http://127.0.0.1:8765/mcp"
 bearer_token_env_var = "MEM0_API_KEY"
 ```
 
-Export `MEM0_API_KEY` in your shell and restart Codex. `codex mcp add` only supports stdio servers, so HTTP servers like Mem0's must be added via `config.toml` directly (or via the **Plugins → Connect to a custom MCP → Streamable HTTP** UI in the Codex app).
+Export `MEM0_API_KEY` in your shell and restart Codex. You can also add the same streamable HTTP server with:
+
+```bash
+codex mcp add mem0 --url "${MEM0_MCP_URL:-http://127.0.0.1:8765/mcp}" --bearer-token-env-var MEM0_API_KEY
+```
 
 **Option B — Sideload the plugin** (full experience: MCP + skills + opt-in hooks):
 
@@ -92,7 +96,7 @@ codex plugin marketplace add ~/codex-plugins/mem0-source
 
 This points Codex at the repo's `.agents/plugins/marketplace.json`, which references `integrations/mem0-plugin/` as the local source. Restart Codex, run `/plugins`, and install **Mem0** from the **Mem0 Plugins** marketplace.
 
-> **Don't combine with Option A.** The plugin manifest auto-registers `mem0` as an MCP server via `integrations/mem0-plugin/.codex-mcp.json` — adding a manual `[mcp_servers.mem0]` block would duplicate the registration.
+> **Don't combine with Option A.** The plugin manifest auto-registers `mem0` as an MCP server via `integrations/mem0-plugin/.mcp.json` — adding a manual `[mcp_servers.mem0]` block would duplicate the registration.
 
 **Optional — enable lifecycle hooks.** Codex doesn't auto-wire hooks from plugin manifests; it only reads `~/.codex/hooks.json` (or `<repo>/.codex/hooks.json`) ([docs](https://developers.openai.com/codex/hooks)). Run the bundled installer once to merge Mem0's entries:
 
@@ -250,7 +254,7 @@ The plugin includes 17 skills accessible via `/mem0:` commands:
 | Lifecycle Hooks | Yes | Yes | No | Opt-in | No | Yes | No | Yes |
 | Mem0 SDK Skill | Yes | Yes | No | Yes | No | Yes | No | Yes |
 
-- **MCP Server** — Connects to the Mem0 remote MCP server (`mcp.mem0.ai`), providing tools to add, search, update, and delete memories. No local dependencies required.
+- **MCP Server** — Connects to the configured self-hosted Mem0 MCP server, providing tools to add, search, update, and delete memories.
 - **Lifecycle Hooks** — Automatic memory capture at key points. Claude Code, Cursor, OpenCode, and Antigravity wire hooks natively when the full plugin is installed. Codex hooks are opt-in via a one-time installer (`scripts/install_codex_hooks.py`).
 - **Mem0 SDK Skill** — Guides the AI on how to integrate the Mem0 SDK (Python & TypeScript) into your applications.
 

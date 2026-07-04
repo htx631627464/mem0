@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 
@@ -14,18 +15,35 @@ def test_search_memories_returns_results():
         {"id": "def456", "memory": "Never use floats for money", "metadata": {"type": "anti_pattern"}},
     ]
 
+    captured_url = {}
+
     def mock_urlopen(req, timeout=None):
+        captured_url["url"] = req.full_url
         resp = MagicMock()
         resp.read.return_value = json.dumps({"results": fake_results}).encode()
         resp.__enter__ = lambda s: s
         resp.__exit__ = MagicMock(return_value=False)
         return resp
 
-    with patch("urllib.request.urlopen", side_effect=mock_urlopen):
-        results = search_memories("test-key", "user1", "proj1", "auth decisions")
+    with patch.dict("os.environ", {"MEM0_API_HOST": "http://gateway.local"}, clear=False):
+        with patch("urllib.request.urlopen", side_effect=mock_urlopen):
+            results = search_memories("test-key", "user1", "proj1", "auth decisions")
 
+    assert captured_url["url"] == "http://gateway.local/v3/memories/search/"
     assert len(results) == 2
     assert results[0]["id"] == "abc123"
+
+
+def test_search_memories_requires_api_host(monkeypatch, tmp_path):
+    from _search import search_memories
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    with patch.dict("os.environ", {}, clear=True):
+        with patch("urllib.request.urlopen") as urlopen:
+            results = search_memories("test-key", "user1", "proj1", "auth decisions")
+
+    assert results == []
+    urlopen.assert_not_called()
 
 
 def test_search_memories_with_metadata_type():
@@ -41,8 +59,9 @@ def test_search_memories_with_metadata_type():
         resp.__exit__ = MagicMock(return_value=False)
         return resp
 
-    with patch("urllib.request.urlopen", side_effect=mock_urlopen):
-        search_memories("key", "user", "proj", "query", metadata_type="decision")
+    with patch.dict("os.environ", {"MEM0_API_HOST": "http://gateway.local"}, clear=False):
+        with patch("urllib.request.urlopen", side_effect=mock_urlopen):
+            search_memories("key", "user", "proj", "query", metadata_type="decision")
 
     filters = captured_body["filters"]
     assert {"metadata": {"type": "decision"}} in filters["AND"]
@@ -51,8 +70,9 @@ def test_search_memories_with_metadata_type():
 def test_search_memories_handles_api_error():
     from _search import search_memories
 
-    with patch("urllib.request.urlopen", side_effect=Exception("timeout")):
-        results = search_memories("key", "user", "proj", "query")
+    with patch.dict("os.environ", {"MEM0_API_HOST": "http://gateway.local"}, clear=False):
+        with patch("urllib.request.urlopen", side_effect=Exception("timeout")):
+            results = search_memories("key", "user", "proj", "query")
 
     assert results == []
 
@@ -69,8 +89,9 @@ def test_search_memories_handles_list_response():
         resp.__exit__ = MagicMock(return_value=False)
         return resp
 
-    with patch("urllib.request.urlopen", side_effect=mock_urlopen):
-        results = search_memories("key", "user", "proj", "query")
+    with patch.dict("os.environ", {"MEM0_API_HOST": "http://gateway.local"}, clear=False):
+        with patch("urllib.request.urlopen", side_effect=mock_urlopen):
+            results = search_memories("key", "user", "proj", "query")
 
     assert len(results) == 1
 
@@ -88,16 +109,39 @@ def test_search_memories_respects_top_k():
         resp.__exit__ = MagicMock(return_value=False)
         return resp
 
-    with patch("urllib.request.urlopen", side_effect=mock_urlopen):
-        search_memories("key", "user", "proj", "query", top_k=5)
+    with patch.dict("os.environ", {"MEM0_API_HOST": "http://gateway.local"}, clear=False):
+        with patch("urllib.request.urlopen", side_effect=mock_urlopen):
+            search_memories("key", "user", "proj", "query", top_k=5)
 
     assert captured_body["top_k"] == 5
+
+
+def test_search_memories_allows_slow_self_hosted_embedding_calls():
+    from _search import search_memories
+
+    captured_timeout = {}
+
+    def mock_urlopen(req, timeout=None):
+        captured_timeout["timeout"] = timeout
+        resp = MagicMock()
+        resp.read.return_value = json.dumps({"results": []}).encode()
+        resp.__enter__ = lambda s: s
+        resp.__exit__ = MagicMock(return_value=False)
+        return resp
+
+    with patch.dict("os.environ", {"MEM0_API_HOST": "http://gateway.local"}, clear=False):
+        with patch("urllib.request.urlopen", side_effect=mock_urlopen):
+            search_memories("key", "user", "proj", "query")
+
+    assert captured_timeout["timeout"] >= 15
 
 
 def test_search_memories_no_api_key_returns_empty():
     from _search import search_memories
 
-    results = search_memories("", "user", "proj", "query")
+    with patch.dict("os.environ", {"MEM0_API_HOST": "http://gateway.local"}, clear=False):
+        results = search_memories("", "user", "proj", "query")
+
     assert results == []
 
 

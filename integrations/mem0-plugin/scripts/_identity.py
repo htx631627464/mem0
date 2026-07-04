@@ -22,34 +22,73 @@ import os
 import re
 from pathlib import Path
 
+PROFILE_NAMES = [".zshrc", ".bashrc", ".zprofile", ".bash_profile", ".profile"]
 
-def _extract_key_from_shell_profiles() -> str:
-    """Extract MEM0_API_KEY from shell profile files.
+
+def _clean_profile_value(raw: str) -> str:
+    value = raw.strip()
+    if not value:
+        return ""
+    if value[0] in {"'", '"'}:
+        quote = value[0]
+        end = value.find(quote, 1)
+        value = value[1:end] if end != -1 else value.strip(quote)
+    else:
+        value = re.sub(r"#.*$", "", value).strip()
+    return value.strip()
+
+
+def _extract_var_from_shell_profiles(var_name: str) -> str:
+    """Extract a literal environment variable assignment from shell profile files.
 
     The Desktop app only reads PATH from shell profiles — env vars like
-    MEM0_API_KEY are not inherited. This handles the common
-    ``export MEM0_API_KEY=...`` pattern without sourcing the full profile.
+    MEM0_API_KEY or MEM0_API_HOST are not inherited. This handles the common
+    ``export NAME=...`` pattern without sourcing the full profile.
     """
-    profiles = [".zshrc", ".bashrc", ".zprofile", ".bash_profile", ".profile"]
-    pattern = re.compile(r'^\s*(?:export\s+)?MEM0_API_KEY=(.+)$')
+    pattern = re.compile(rf"^\s*(?:export\s+)?{re.escape(var_name)}=(.+)$")
 
-    for name in profiles:
+    for name in PROFILE_NAMES:
         path = Path.home() / name
         if not path.is_file():
             continue
         try:
+            found = ""
             for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
                 m = pattern.match(line)
                 if not m:
                     continue
-                value = m.group(1).strip()
-                value = re.sub(r'#.*$', '', value).strip()
-                value = value.strip("\"'")
+                value = _clean_profile_value(m.group(1))
                 if value and not value.startswith("$"):
-                    return value
+                    found = value
+            if found:
+                return found
         except OSError:
             continue
     return ""
+
+
+def _extract_key_from_shell_profiles() -> str:
+    """Extract MEM0_API_KEY from shell profile files."""
+    return _extract_var_from_shell_profiles("MEM0_API_KEY")
+
+
+def resolve_env_value(var_name: str) -> str:
+    """Resolve a MEM0 env var from process env, then shell profile fallback."""
+    value = os.environ.get(var_name, "").strip()
+    if value:
+        return value
+    value = _extract_var_from_shell_profiles(var_name)
+    if value:
+        os.environ[var_name] = value
+    return value
+
+
+def resolve_api_base_url() -> str:
+    return (resolve_env_value("MEM0_API_HOST") or resolve_env_value("MEM0_API_URL")).rstrip("/")
+
+
+def resolve_mcp_url() -> str:
+    return resolve_env_value("MEM0_MCP_URL")
 
 
 def resolve_api_key() -> str:
@@ -64,6 +103,7 @@ def resolve_api_key() -> str:
         return key
     key = _extract_key_from_shell_profiles()
     if key:
+        os.environ["MEM0_API_KEY"] = key
         return key
     return ""
 

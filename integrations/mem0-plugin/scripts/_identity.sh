@@ -12,6 +12,25 @@
 
 _SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd )"
 
+_mem0_extract_profile_var() {
+  _mem0_var_name="$1"
+  for _profile in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.zprofile" "$HOME/.bash_profile" "$HOME/.profile"; do
+    if [ -f "$_profile" ]; then
+      _extracted=$(grep -E "^\s*(export\s+)?${_mem0_var_name}=" "$_profile" 2>/dev/null \
+        | tail -1 \
+        | sed 's/^[^=]*=//' \
+        | sed 's/[[:space:]]#.*//' \
+        | sed "s/^[\"']//;s/[\"']$//" \
+        | tr -d '[:space:]')
+      # Only use literal values — skip variable references like ${OTHER_VAR}
+      if [ -n "$_extracted" ] && [ "${_extracted#\$}" = "$_extracted" ]; then
+        printf '%s' "$_extracted"
+        return
+      fi
+    fi
+  done
+}
+
 # Resolve API key: env var > userConfig > shell profile extraction
 if [ -z "${MEM0_API_KEY:-}" ] && [ -n "${CLAUDE_PLUGIN_OPTION_API_KEY:-}" ]; then
   MEM0_API_KEY="$CLAUDE_PLUGIN_OPTION_API_KEY"
@@ -27,23 +46,23 @@ fi
 # the common `export MEM0_API_KEY=...` pattern without sourcing the
 # full profile (which could have side effects).
 if [ -z "${MEM0_API_KEY:-}" ]; then
-  for _profile in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.zprofile" "$HOME/.bash_profile" "$HOME/.profile"; do
-    if [ -f "$_profile" ]; then
-      _extracted=$(grep -E '^\s*(export\s+)?MEM0_API_KEY=' "$_profile" 2>/dev/null \
-        | tail -1 \
-        | sed 's/^[^=]*=//' \
-        | sed "s/^[\"']//;s/[\"']$//" \
-        | sed 's/#.*//' \
-        | tr -d '[:space:]')
-      # Only use literal values — skip variable references like ${OTHER_VAR}
-      if [ -n "$_extracted" ] && [ "${_extracted#\$}" = "$_extracted" ]; then
-        MEM0_API_KEY="$_extracted"
-        export MEM0_API_KEY
-        break
-      fi
-    fi
-  done
+  _extracted="$(_mem0_extract_profile_var MEM0_API_KEY)"
+  if [ -n "$_extracted" ]; then
+    MEM0_API_KEY="$_extracted"
+    export MEM0_API_KEY
+  fi
 fi
+
+for _mem0_endpoint_var in MEM0_API_HOST MEM0_API_URL MEM0_MCP_URL; do
+  eval "_mem0_current_value=\"\${${_mem0_endpoint_var}:-}\""
+  if [ -z "$_mem0_current_value" ]; then
+    _extracted="$(_mem0_extract_profile_var "$_mem0_endpoint_var")"
+    if [ -n "$_extracted" ]; then
+      export "${_mem0_endpoint_var}=$_extracted"
+    fi
+  fi
+done
+unset _mem0_endpoint_var _mem0_current_value _extracted
 
 _mem0_resolve_identity() {
   if [ -n "${MEM0_USER_ID:-}" ]; then

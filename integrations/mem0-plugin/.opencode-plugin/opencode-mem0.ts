@@ -1,5 +1,5 @@
 // Mem0 memory plugin for OpenCode: captures and recalls memories across sessions
-// (add / search / manage) via the Mem0 platform, wired through OpenCode plugin hooks.
+// (add / search / manage) via an explicit Mem0 API host, wired through OpenCode plugin hooks.
 import type { Plugin } from "@opencode-ai/plugin";
 import { MemoryClient } from "mem0ai";
 import { userInfo } from "os";
@@ -123,6 +123,14 @@ function categoriesFingerprint(): string {
 
 function apiKeyFingerprint(apiKey: string): string {
   return createHash("sha256").update(apiKey).digest("hex").slice(0, 16);
+}
+
+function getApiHost(): string {
+  return (
+    process.env.MEM0_API_HOST?.trim() ||
+    process.env.MEM0_API_URL?.trim() ||
+    ""
+  ).replace(/\/+$/, "");
 }
 
 async function autoSetupCategories(mem0: MemoryClient, apiKey: string): Promise<void> {
@@ -257,14 +265,29 @@ const Mem0Plugin: Plugin = async (ctx) => {
           service: "mem0",
           level: "warn",
           message:
-            "MEM0_API_KEY not set. Get one at https://app.mem0.ai/dashboard/api-keys",
+            "MEM0_API_KEY not set. Set it to your self-hosted Mem0 gateway token.",
         },
       });
     } catch {}
     return {};
   }
 
-  const mem0 = new MemoryClient({ apiKey });
+  const apiHost = getApiHost();
+  if (!apiHost) {
+    try {
+      await client.app.log({
+        body: {
+          service: "mem0",
+          level: "warn",
+          message:
+            "MEM0_API_HOST not set. Set it to your self-hosted Mem0 gateway URL, for example http://127.0.0.1:8765.",
+        },
+      });
+    } catch {}
+    return {};
+  }
+
+  const mem0 = new MemoryClient({ apiKey, host: apiHost });
   const userId = await getUserId();
   const appId = await getProjectId($);
   const branch = await getBranch($);

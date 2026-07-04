@@ -51,7 +51,7 @@
             "type": "command",
             "command": "${PLUGIN_ROOT}/scripts/on_user_prompt.sh",
             "statusMessage": "Checking memory relevance...",
-            "timeout": 12
+            "timeout": 35
           }
         ]
       }
@@ -73,7 +73,7 @@
           {
             "type": "command",
             "command": "${PLUGIN_ROOT}/scripts/on_bash_output.sh",
-            "timeout": 12
+            "timeout": 35
           }
         ]
       }

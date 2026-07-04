@@ -53,14 +53,14 @@ The fastest way to connect Codex to Mem0 — no plugin, no marketplace. Add to `
 
 ```toml
 [mcp_servers.mem0]
-url = "https://mcp.mem0.ai/mcp"
+url = "http://127.0.0.1:8765/mcp"
 bearer_token_env_var = "MEM0_API_KEY"
 ```
 
 Make sure `MEM0_API_KEY` is exported in the shell you launch Codex from, then restart Codex.
 
 <Info>
-  Codex's `codex mcp add` CLI only supports stdio MCP servers. Because Mem0's MCP is HTTP/streamable, you configure it by editing `config.toml` directly (or via the **Plugins → Connect to a custom MCP → Streamable HTTP** UI in the Codex app).
+  You can also add the same streamable HTTP server with `codex mcp add mem0 --url "${MEM0_MCP_URL:-http://127.0.0.1:8765/mcp}" --bearer-token-env-var MEM0_API_KEY`.
 </Info>
 
 This gives you the MCP tools but not the lifecycle hooks or SDK skill.

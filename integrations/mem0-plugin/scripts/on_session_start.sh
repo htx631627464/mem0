@@ -35,6 +35,13 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   if [ -n "${MEM0_API_KEY:-}" ]; then
     echo "export MEM0_API_KEY=\"$MEM0_API_KEY\"" >> "$CLAUDE_ENV_FILE"
   fi
+  for _MEM0_ENV_NAME in MEM0_API_HOST MEM0_API_URL MEM0_MCP_URL; do
+    eval "_MEM0_ENV_VALUE=\"\${${_MEM0_ENV_NAME}:-}\""
+    if [ -n "$_MEM0_ENV_VALUE" ]; then
+      echo "export ${_MEM0_ENV_NAME}=\"${_MEM0_ENV_VALUE}\"" >> "$CLAUDE_ENV_FILE"
+    fi
+  done
+  unset _MEM0_ENV_NAME _MEM0_ENV_VALUE
 fi
 
 if [ -z "${MEM0_API_KEY:-}" ]; then
@@ -53,10 +60,9 @@ Mem0 — Setup Required | user=${_UID} | project=${_PID} | branch=${_BR} | auth=
 \`\`\`
 
 MEM0_API_KEY is not set. To configure:
-- **Reinstall the plugin**: Uninstall and reinstall — Claude Code will prompt for your API key during setup (stored securely in keychain)
-- **Desktop app**: Click the environment dropdown next to the prompt box → hover over **Local** → click the **gear icon** → add \`MEM0_API_KEY=m0-...\`
-- **CLI**: Add \`export MEM0_API_KEY=m0-...\` to your shell profile (~/.zshrc or ~/.bashrc)
-- Get a key at https://app.mem0.ai/dashboard/api-keys
+- Set \`MEM0_API_KEY\` to your self-hosted Mem0 gateway token
+- Set \`MEM0_API_HOST\` to your self-hosted Mem0 gateway URL
+- Set \`MEM0_MCP_URL\` to your self-hosted Mem0 MCP endpoint
 
 Then invoke the \`mem0:onboard\` skill to complete setup.
 BANNER
@@ -74,14 +80,17 @@ if command -v python3 >/dev/null 2>&1; then
   MEM0_COUNT=$(python3 -c "
 import json, os, urllib.request, urllib.error
 api_key = os.environ.get('MEM0_API_KEY', '')
+api_host = (os.environ.get('MEM0_API_HOST', '').strip() or os.environ.get('MEM0_API_URL', '').strip()).rstrip('/')
 user_id = os.environ.get('MEM0_RESOLVED_USER_ID', 'default')
 app_id = os.environ.get('MEM0_PROJECT_ID', '')
 global_search = os.environ.get('MEM0_GLOBAL_SEARCH', 'false') == 'true'
 
 def get_count(filters):
+    if not api_host:
+        raise RuntimeError('MEM0_API_HOST is required')
     body = json.dumps({'filters': filters}).encode()
     req = urllib.request.Request(
-        'https://api.mem0.ai/v3/memories/?page=1&page_size=1',
+        f'{api_host}/v3/memories/?page=1&page_size=1',
         headers={'Authorization': f'Token {api_key}', 'Content-Type': 'application/json'},
         data=body, method='POST',
     )

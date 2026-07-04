@@ -7,16 +7,26 @@ All pre-fetch hooks use this instead of duplicating urllib boilerplate.
 from __future__ import annotations
 
 import json
+import os
 import urllib.request
 
-SEARCH_URL = "https://api.mem0.ai/v3/memories/search/"
-SEARCH_TIMEOUT = 5
+from _api import api_url
+
+
+def _resolve_search_timeout() -> int:
+    try:
+        return max(1, int(os.environ.get("MEM0_SEARCH_TIMEOUT", "15")))
+    except ValueError:
+        return 15
+
+
+SEARCH_TIMEOUT = _resolve_search_timeout()
 
 
 def _do_search(api_key: str, payload: dict) -> list[dict]:
     body = json.dumps(payload).encode()
     req = urllib.request.Request(
-        SEARCH_URL,
+        api_url("/v3/memories/search/"),
         data=body,
         headers={"Authorization": f"Token {api_key}", "Content-Type": "application/json"},
         method="POST",

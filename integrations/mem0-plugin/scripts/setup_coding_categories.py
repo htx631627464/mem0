@@ -12,7 +12,7 @@ Usage:
   python setup_coding_categories.py            # dry-run: show current vs proposed
   python setup_coding_categories.py --apply    # actually call project.update()
 
-Requires MEM0_API_KEY (or CLAUDE_PLUGIN_OPTION_MEM0_API_KEY).
+Requires MEM0_API_KEY (or CLAUDE_PLUGIN_OPTION_MEM0_API_KEY) and MEM0_API_HOST.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ import sys
 
 _script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _script_dir)
+from _api import api_base_url  # noqa: E402
 from _identity import resolve_api_key  # noqa: E402
 
 _plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", os.path.join(_script_dir, ".."))
@@ -180,6 +181,11 @@ def main() -> int:
         print("ERROR: MEM0_API_KEY is not set. Export it or configure it via plugin userConfig.", file=sys.stderr)
         return 1
     os.environ["MEM0_API_KEY"] = api_key
+    try:
+        api_host = api_base_url()
+    except RuntimeError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 1
 
     try:
         from mem0 import MemoryClient
@@ -193,12 +199,11 @@ def main() -> int:
         return 1
 
     try:
-        client = MemoryClient()
+        client = MemoryClient(host=api_host)
     except Exception as e:
         print(
             f"ERROR initialising MemoryClient: {e}\n"
-            "Most commonly this is an invalid MEM0_API_KEY -- check the key at "
-            "https://app.mem0.ai/dashboard/api-keys",
+            "Most commonly this is an invalid MEM0_API_KEY or MEM0_API_HOST.",
             file=sys.stderr,
         )
         return 1

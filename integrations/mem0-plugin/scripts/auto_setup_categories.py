@@ -21,8 +21,9 @@ Design (mirrors auto_import.py):
 Run with no arguments (background) or in the foreground for onboarding to print
 a parseable status line.
 
-Requires MEM0_API_KEY (or CLAUDE_PLUGIN_OPTION_API_KEY) and the mem0ai SDK,
-which ensure_deps.sh installs into ${CLAUDE_PLUGIN_DATA}/venv on session start.
+Requires MEM0_API_KEY (or CLAUDE_PLUGIN_OPTION_API_KEY), MEM0_API_HOST, and
+the mem0ai SDK, which ensure_deps.sh installs into ${CLAUDE_PLUGIN_DATA}/venv
+on session start.
 """
 
 from __future__ import annotations
@@ -38,6 +39,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Importing setup_coding_categories also injects the plugin venv's site-packages
 # onto sys.path (its module-level bootstrap), so ``from mem0 import MemoryClient``
 # works even when this script is run with the system python3.
+from _api import api_base_url  # noqa: E402
 from _identity import resolve_api_key  # noqa: E402
 from setup_coding_categories import CODING_CATEGORIES, _categories_match  # noqa: E402
 
@@ -128,7 +130,7 @@ def make_client():
     """Construct a MemoryClient. Imported lazily so this module loads without the SDK."""
     from mem0 import MemoryClient
 
-    return MemoryClient()
+    return MemoryClient(host=api_base_url())
 
 
 def fetch_current_categories(client) -> list | None:
