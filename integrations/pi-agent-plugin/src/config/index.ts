@@ -20,7 +20,8 @@ const DEFAULT_CONFIG: Mem0Config = {
   userId: "",
   autoCapture: true,
   defaultScope: "project",
-  contextInjection: false,
+  contextInjection: true,
+  searchThreshold: 0.3,
   dream: DEFAULT_DREAM,
 };
 
@@ -47,11 +48,18 @@ export function loadConfig(): Mem0Config {
     dream,
   };
 
-  if (process.env.MEM0_API_KEY) {
+  // File wins over env: a self-hosted setup typically pins apiKey/baseUrl in
+  // mem0-config.json while the shell may still export MEM0_API_KEY for other
+  // tools (opencode/Codex) pointing at a different key or server. Env vars
+  // only fill values the config file does not provide.
+  if (!config.apiKey && process.env.MEM0_API_KEY) {
     config.apiKey = process.env.MEM0_API_KEY;
   }
-  if (process.env.MEM0_USER_ID) {
+  if (!config.userId && process.env.MEM0_USER_ID) {
     config.userId = process.env.MEM0_USER_ID;
+  }
+  if (!config.baseUrl && process.env.MEM0_BASE_URL) {
+    config.baseUrl = process.env.MEM0_BASE_URL;
   }
 
   return config;

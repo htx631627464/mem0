@@ -11,9 +11,11 @@ export interface DreamConfig {
 export interface Mem0Config {
   apiKey: string;
   userId: string;
+  baseUrl?: string;
   autoCapture: boolean;
   defaultScope: Scope;
   contextInjection: boolean;
+  searchThreshold: number;
   dream: DreamConfig;
 }
 
