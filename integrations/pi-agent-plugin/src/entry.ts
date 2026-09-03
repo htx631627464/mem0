@@ -167,6 +167,13 @@ export default function mem0Extension(pi: ExtensionAPI): void {
     if (hadWriteAction) {
       recordDreamCompletion(CONFIG_DIR);
       captureEvent("pi.dream.completed", {}, telemetryCtx);
+    } else {
+      // No write happened this turn (user declined, read-only review, or the
+      // model skipped consolidation). Record completion anyway so the dream
+      // gates reset — otherwise every new session re-triggers the protocol
+      // until someone happens to perform a write.
+      recordDreamCompletion(CONFIG_DIR);
+      captureEvent("pi.dream.skipped", {}, telemetryCtx);
     }
 
     releaseDreamLock(CONFIG_DIR);
