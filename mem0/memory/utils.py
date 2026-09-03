@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import re
+from datetime import date
 from typing import Any, Dict, List
 
 from mem0.configs.prompts import (
@@ -10,6 +11,17 @@ from mem0.configs.prompts import (
 )
 
 logger = logging.getLogger(__name__)
+
+# The extraction prompts are module-level f-strings: their "Today's date" line
+# is evaluated once at import time and goes stale in long-running services.
+# Rewrite it to the real current date on every call.
+_DATE_LINE_RE = re.compile(r"- Today's date is \d{4}-\d{2}-\d{2}\.")
+
+
+def _with_current_date(system_prompt: str) -> str:
+    return _DATE_LINE_RE.sub(
+        f"- Today's date is {date.today().isoformat()}.", system_prompt
+    )
 
 
 def get_fact_retrieval_messages(message, is_agent_memory=False):
@@ -23,14 +35,14 @@ def get_fact_retrieval_messages(message, is_agent_memory=False):
         tuple: (system_prompt, user_prompt)
     """
     if is_agent_memory:
-        return AGENT_MEMORY_EXTRACTION_PROMPT, f"Input:\n{message}"
+        return _with_current_date(AGENT_MEMORY_EXTRACTION_PROMPT), f"Input:\n{message}"
     else:
-        return USER_MEMORY_EXTRACTION_PROMPT, f"Input:\n{message}"
+        return _with_current_date(USER_MEMORY_EXTRACTION_PROMPT), f"Input:\n{message}"
 
 
 def get_fact_retrieval_messages_legacy(message):
     """Legacy function for backward compatibility."""
-    return FACT_RETRIEVAL_PROMPT, f"Input:\n{message}"
+    return _with_current_date(FACT_RETRIEVAL_PROMPT), f"Input:\n{message}"
 
 
 def ensure_json_instruction(system_prompt, user_prompt):
