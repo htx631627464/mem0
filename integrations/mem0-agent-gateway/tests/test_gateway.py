@@ -3,11 +3,12 @@ import sys
 from pathlib import Path
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, MockTransport, Response
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from mem0_agent_gateway.app import create_app
+from mem0_agent_gateway.client import Mem0ServerClient
 from mem0_agent_gateway.config import GatewaySettings
 
 
@@ -78,6 +79,41 @@ class FakeMem0ServerClient:
         self.calls.append(("delete_entity", {"entity_type": entity_type, "entity_id": entity_id}))
         return {"message": "Entity deleted"}
 
+
+@pytest.mark.asyncio
+async def test_mem0_server_client_flattens_nested_filters_for_platform_listing():
+    captured = {}
+
+    async def handler(request):
+        captured["json"] = json.loads(request.content)
+        return Response(200, json={"results": []})
+
+    settings = GatewaySettings(
+        gateway_token="gateway-token",
+        mem0_server_url="http://mem0:8000",
+        mem0_server_api_key="server-key",
+    )
+    server_client = Mem0ServerClient(settings)
+    server_client._client = AsyncClient(
+        transport=MockTransport(handler),
+        base_url=settings.mem0_server_url,
+        headers={"X-API-Key": settings.mem0_server_api_key},
+    )
+
+    try:
+        await server_client.get_memories(
+            {
+                "AND": [
+                    {"user_id": "nero"},
+                    {"app_id": "mem0"},
+                    {"metadata": {"type": "decision"}},
+                ]
+            }
+        )
+    finally:
+        await server_client.close()
+
+    assert captured["json"] == {"filters": {"user_id": "nero", "app_id": "mem0", "type": "decision"}}
 
 @pytest.fixture
 def fake_client():

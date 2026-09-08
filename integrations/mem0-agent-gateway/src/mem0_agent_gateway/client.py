@@ -5,7 +5,7 @@ from typing import Any
 import httpx
 
 from .config import GatewaySettings
-from .filters import extract_entities, normalize_filters
+from .filters import extract_entities, flatten_filters
 
 
 class Mem0ServerClient:
@@ -39,15 +39,17 @@ class Mem0ServerClient:
         return data if isinstance(data, dict) else {"results": data}
 
     async def get_memories(self, filters: dict[str, Any] | None) -> dict[str, Any]:
-        entity_filters = extract_entities(normalize_filters(filters or {}, map_app_id=False))
-        if filters and entity_filters:
+        platform_filters = flatten_filters(filters or {})
+        entity_filters = extract_entities(platform_filters)
+        if platform_filters and entity_filters:
             # The native GET /memories path defaults to top_k=20 and only
             # accepts entity query parameters. The Platform API preserves
             # app_id metadata filters and fetches a wide page before pagination.
+            # It expects flat filters rather than the hosted SDK nested form.
             response = await self._client.post(
                 "/v3/memories/",
                 params={"page": 1, "page_size": 1000},
-                json={"filters": filters},
+                json={"filters": platform_filters},
             )
         else:
             # Preserve the old unscoped/metadata-only listing path; the Platform

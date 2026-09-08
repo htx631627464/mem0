@@ -36,6 +36,32 @@ def normalize_filters(value: Any, *, map_app_id: bool = True) -> Any:
     return normalized
 
 
+def flatten_filters(filters: Any, *, map_app_id: bool = False) -> dict[str, Any]:
+    """Flatten AND/metadata filters for Platform API request bodies."""
+    flat: dict[str, Any] = {}
+
+    def visit(node: Any) -> None:
+        if isinstance(node, list):
+            for item in node:
+                visit(item)
+            return
+        if not isinstance(node, dict):
+            return
+        for key, value in node.items():
+            if key == "AND":
+                visit(value)
+            elif key in {"OR", "NOT"}:
+                continue
+            elif key == "metadata" and isinstance(value, dict):
+                visit(value)
+            else:
+                normalized = normalize_filters({key: value}, map_app_id=map_app_id)
+                flat.update(normalized)
+
+    visit(filters)
+    return flat
+
+
 def extract_entities(filters: Any) -> dict[str, str]:
     entities: dict[str, str] = {}
 
