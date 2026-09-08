@@ -144,9 +144,13 @@ def fetch_current_categories(client) -> list | None:
 def apply_categories(client, proposed: list = CODING_CATEGORIES) -> str:
     """Install the coding taxonomy if it isn't already in place.
 
-    Returns "already-configured" when the project already matches (no write), or
+    Returns "unsupported" when the project identity is unavailable,
+    "already-configured" when the project already matches (no write), or
     "applied" after a successful ``project.update``. Raises on API failure.
     """
+    if not client.project.org_id or not client.project.project_id:
+        return "unsupported"
+
     current = fetch_current_categories(client)
     if _categories_match(current, proposed):
         return "already-configured"
@@ -207,6 +211,9 @@ def main() -> None:
         log.debug("mem0ai SDK not ready yet (venv installing?); will retry next session")
         return
     except Exception as e:
+        if isinstance(e, ValueError) and "org_id and project_id must be set" in str(e):
+            log.info("Coding categories unavailable for this self-hosted endpoint; skipping")
+            return
         log.warning("Could not initialise MemoryClient: %s", e)
         return
 
@@ -214,6 +221,10 @@ def main() -> None:
         result = apply_categories(client)
     except Exception as e:
         log.warning("Could not configure coding categories: %s", e)
+        return
+
+    if result == "unsupported":
+        log.info("Coding categories unavailable for this self-hosted endpoint; skipping")
         return
 
     state[key_fp] = cat_fp

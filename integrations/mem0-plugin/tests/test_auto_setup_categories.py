@@ -24,11 +24,15 @@ from setup_coding_categories import CODING_CATEGORIES  # noqa: E402
 # Fake client (dependency injection — apply_categories takes a client)         #
 # --------------------------------------------------------------------------- #
 class _FakeProject:
-    def __init__(self, current):
+    def __init__(self, current, org_id="org-123", project_id="project-123"):
         self._current = current
+        self.org_id = org_id
+        self.project_id = project_id
+        self.get_calls = 0
         self.update_calls: list = []
 
     def get(self, fields=None):
+        self.get_calls += 1
         return {"custom_categories": self._current}
 
     def update(self, custom_categories=None, **kwargs):
@@ -37,8 +41,8 @@ class _FakeProject:
 
 
 class _FakeClient:
-    def __init__(self, current):
-        self.project = _FakeProject(current)
+    def __init__(self, current, org_id="org-123", project_id="project-123"):
+        self.project = _FakeProject(current, org_id=org_id, project_id=project_id)
 
 
 # --------------------------------------------------------------------------- #
@@ -123,6 +127,50 @@ def test_is_applied_true_only_on_exact_match():
 # --------------------------------------------------------------------------- #
 # apply_categories: idempotent, network-free via fake client                  #
 # --------------------------------------------------------------------------- #
+def test_apply_skips_project_api_when_project_identity_is_unavailable():
+    client = _FakeClient(None, org_id="", project_id="")
+    result = asc.apply_categories(client, CODING_CATEGORIES)
+    assert result == "unsupported"
+    assert client.project.get_calls == 0
+    assert client.project.update_calls == []
+
+
+def test_main_treats_unsupported_project_categories_as_normal(monkeypatch, caplog):
+    client = _FakeClient(None, org_id="", project_id="")
+    saved_states = []
+    monkeypatch.setenv("MEM0_API_KEY", "test-api-key")
+    monkeypatch.setattr(asc, "resolve_api_key", lambda: "test-api-key")
+    monkeypatch.setattr(asc, "load_state", lambda: {})
+    monkeypatch.setattr(asc, "make_client", lambda: client)
+    monkeypatch.setattr(asc, "save_state", lambda state: saved_states.append(state))
+
+    with caplog.at_level("INFO", logger="mem0-auto-categories"):
+        asc.main()
+
+    assert saved_states == []
+    assert "unavailable" in caplog.text.lower()
+
+
+def test_main_treats_missing_project_identity_during_client_init_as_unsupported(monkeypatch, caplog):
+    saved_states = []
+
+    def raise_missing_project_identity():
+        raise ValueError("org_id and project_id must be set to access project operations")
+
+    monkeypatch.setattr(asc, "resolve_api_key", lambda: "test-api-key")
+    monkeypatch.setattr(asc, "load_state", lambda: {})
+    monkeypatch.setattr(asc, "make_client", raise_missing_project_identity)
+    monkeypatch.setattr(asc, "save_state", lambda state: saved_states.append(state))
+
+    with caplog.at_level("INFO", logger="mem0-auto-categories"):
+        asc.main()
+
+    assert saved_states == []
+    assert "unavailable" in caplog.text.lower()
+    assert "self-hosted" in caplog.text.lower()
+    assert "Could not initialise MemoryClient" not in caplog.text
+
+
 def test_apply_skips_update_when_already_matching():
     client = _FakeClient(CODING_CATEGORIES)
     result = asc.apply_categories(client, CODING_CATEGORIES)

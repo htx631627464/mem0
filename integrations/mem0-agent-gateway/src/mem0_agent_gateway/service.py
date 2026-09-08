@@ -41,8 +41,8 @@ class GatewayService:
 
     async def search_memories(self, payload: dict[str, Any]) -> dict[str, Any]:
         request: dict[str, Any] = {"query": payload.get("query", "")}
-        filters = _search_filters_for_server(normalize_filters(payload.get("filters")), payload)
-        if not extract_entities(filters):
+        filters = _search_filters_for_server(payload.get("filters"), payload)
+        if not extract_entities(normalize_filters(filters)):
             raise ValueError(SEARCH_SCOPE_ERROR)
         if filters:
             request["filters"] = filters
@@ -56,12 +56,11 @@ class GatewayService:
         return await self._backend.search_memories(request)
 
     async def get_memories(self, payload: dict[str, Any], page: int = 1, page_size: int = 100) -> dict[str, Any]:
-        filters = normalize_filters(payload.get("filters"))
-        params = extract_entities(filters)
-        response = await self._backend.get_memories(params)
+        filters = payload.get("filters")
+        response = await self._backend.get_memories(filters)
         memories = _as_results(response)
         if filters:
-            memories = [memory for memory in memories if memory_matches_filter(memory, filters)]
+            memories = [memory for memory in memories if memory_matches_filter(memory, filters, map_app_id=False)]
         return _paginate(memories, page=page, page_size=page_size)
 
     async def get_memory(self, memory_id: str) -> dict[str, Any]:
@@ -146,18 +145,26 @@ def _search_filters_for_server(filters: Any, payload: dict[str, Any]) -> Any:
                 collect(value)
             elif key in {"OR", "NOT"}:
                 continue
+            elif key == "metadata" and isinstance(value, dict):
+                collect(value)
             else:
-                flat_filters.setdefault(key, value)
+                normalized_key = {
+                    "app_id": "app_id",
+                    "appId": "app_id",
+                    "userId": "user_id",
+                    "agentId": "agent_id",
+                    "runId": "run_id",
+                }.get(key, key)
+                flat_filters.setdefault(normalized_key, value)
 
     collect(filters)
 
     for source, target in (("user_id", "user_id"), ("agent_id", "agent_id"), ("run_id", "run_id")):
         if payload.get(source):
             flat_filters.setdefault(target, payload[source])
-    if payload.get("app_id") and not payload.get("agent_id"):
-        flat_filters.setdefault("agent_id", payload["app_id"])
-    if payload.get("appId") and not payload.get("agent_id"):
-        flat_filters.setdefault("agent_id", payload["appId"])
+    for source in ("app_id", "appId"):
+        if payload.get(source):
+            flat_filters.setdefault("app_id", payload[source])
 
     return flat_filters or filters
 

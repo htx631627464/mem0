@@ -5,33 +5,34 @@ from typing import Any
 ENTITY_KEYS = {"user_id", "agent_id", "run_id"}
 
 
-def normalize_filters(value: Any) -> Any:
+def normalize_filters(value: Any, *, map_app_id: bool = True) -> Any:
     if isinstance(value, list):
-        return [normalize_filters(item) for item in value]
+        return [normalize_filters(item, map_app_id=map_app_id) for item in value]
     if not isinstance(value, dict):
         return value
 
     if set(value.keys()) == {"metadata"} and isinstance(value.get("metadata"), dict):
-        return normalize_filters(value["metadata"])
+        return normalize_filters(value["metadata"], map_app_id=map_app_id)
 
     normalized: dict[str, Any] = {}
     for key, item in value.items():
         if key in {"AND", "OR", "NOT"}:
             if isinstance(item, list):
-                normalized[key] = [normalize_filters(child) for child in item]
+                normalized[key] = [normalize_filters(child, map_app_id=map_app_id) for child in item]
             else:
-                normalized[key] = normalize_filters(item)
+                normalized[key] = normalize_filters(item, map_app_id=map_app_id)
             continue
 
         if key == "metadata" and isinstance(item, dict):
-            normalized.update(normalize_filters(item))
+            normalized.update(normalize_filters(item, map_app_id=map_app_id))
             continue
 
         if key in {"app_id", "appId"}:
-            normalized["agent_id"] = normalize_filters(item)
+            target_key = "agent_id" if map_app_id else "app_id"
+            normalized[target_key] = normalize_filters(item, map_app_id=map_app_id)
             continue
 
-        normalized[_camel_entity_key(key)] = normalize_filters(item)
+        normalized[_camel_entity_key(key)] = normalize_filters(item, map_app_id=map_app_id)
     return normalized
 
 
@@ -57,8 +58,8 @@ def extract_entities(filters: Any) -> dict[str, str]:
     return entities
 
 
-def memory_matches_filter(memory: dict[str, Any], filters: Any) -> bool:
-    normalized = normalize_filters(filters)
+def memory_matches_filter(memory: dict[str, Any], filters: Any, *, map_app_id: bool = True) -> bool:
+    normalized = normalize_filters(filters, map_app_id=map_app_id)
     if not normalized:
         return True
     return _match_node(memory, normalized)
@@ -97,6 +98,8 @@ def _memory_value(memory: dict[str, Any], key: str) -> Any:
     metadata = memory.get("metadata") if isinstance(memory.get("metadata"), dict) else {}
     if key == "agent_id":
         return memory.get("agent_id") or metadata.get("app_id")
+    if key == "app_id":
+        return memory.get("app_id") or metadata.get("app_id") or memory.get("agent_id")
     if key in memory:
         return memory.get(key)
     return metadata.get(key)

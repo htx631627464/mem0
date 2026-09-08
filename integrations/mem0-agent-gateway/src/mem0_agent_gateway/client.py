@@ -5,6 +5,7 @@ from typing import Any
 import httpx
 
 from .config import GatewaySettings
+from .filters import extract_entities, normalize_filters
 
 
 class Mem0ServerClient:
@@ -30,13 +31,28 @@ class Mem0ServerClient:
         return response.json()
 
     async def search_memories(self, payload: dict[str, Any]) -> dict[str, Any]:
-        response = await self._client.post("/search", json=payload)
+        # Use the server Platform API surface so app_id metadata filters have
+        # the same semantics as official mem0ai clients such as the Pi plugin.
+        response = await self._client.post("/v3/memories/search/", json=payload)
         response.raise_for_status()
         data = response.json()
         return data if isinstance(data, dict) else {"results": data}
 
-    async def get_memories(self, params: dict[str, Any]) -> dict[str, Any]:
-        response = await self._client.get("/memories", params=params)
+    async def get_memories(self, filters: dict[str, Any] | None) -> dict[str, Any]:
+        entity_filters = extract_entities(normalize_filters(filters or {}, map_app_id=False))
+        if filters and entity_filters:
+            # The native GET /memories path defaults to top_k=20 and only
+            # accepts entity query parameters. The Platform API preserves
+            # app_id metadata filters and fetches a wide page before pagination.
+            response = await self._client.post(
+                "/v3/memories/",
+                params={"page": 1, "page_size": 1000},
+                json={"filters": filters},
+            )
+        else:
+            # Preserve the old unscoped/metadata-only listing path; the Platform
+            # compatibility layer currently rejects an empty filter object.
+            response = await self._client.get("/memories")
         response.raise_for_status()
         data = response.json()
         return data if isinstance(data, dict) else {"results": data}

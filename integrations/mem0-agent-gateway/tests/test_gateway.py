@@ -177,7 +177,7 @@ async def test_search_memories_translates_app_id_and_metadata_filters(client, fa
         "search_memories",
         {
             "query": "gateway design",
-            "filters": {"user_id": "nero", "agent_id": "mem0", "type": "decision"},
+            "filters": {"user_id": "nero", "app_id": "mem0", "type": "decision"},
             "top_k": 3,
             "threshold": 0.2,
         },
@@ -203,7 +203,7 @@ async def test_search_memories_maps_top_level_user_and_app_to_filters(client, fa
         "search_memories",
         {
             "query": "gateway design",
-            "filters": {"user_id": "nero", "agent_id": "mem0"},
+            "filters": {"user_id": "nero", "app_id": "mem0"},
             "top_k": 5,
         },
     )
@@ -244,7 +244,43 @@ async def test_get_memories_filters_and_paginates_compat_response(client, fake_c
     assert body["next"] is None
     assert body["previous"] is None
     assert body["results"] == [fake_client.memories[0]]
-    assert fake_client.calls[-1] == ("get_memories", {"user_id": "nero", "agent_id": "mem0"})
+    assert fake_client.calls[-1] == (
+        "get_memories",
+        {
+            "AND": [
+                {"user_id": "nero"},
+                {"app_id": "mem0"},
+                {"metadata": {"type": "decision"}},
+            ]
+        },
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_memories_includes_metadata_only_app_history(client, fake_client):
+    fake_client.memories.append(
+        {
+            "id": "mem-legacy",
+            "memory": "Historical platform memory",
+            "user_id": "nero",
+            "agent_id": "legacy-agent",
+            "metadata": {"type": "decision", "app_id": "mem0"},
+        }
+    )
+
+    response = await client.post(
+        "/v3/memories/?page=1&page_size=100",
+        headers=AUTH_HEADERS,
+        json={"filters": {"user_id": "nero", "app_id": "mem0"}},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+    assert {item["id"] for item in response.json()["results"]} == {"mem-1", "mem-legacy"}
+    assert fake_client.calls[-1] == (
+        "get_memories",
+        {"user_id": "nero", "app_id": "mem0"},
+    )
 
 
 @pytest.mark.asyncio
