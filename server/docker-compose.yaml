@@ -12,7 +12,7 @@ services:
     networks:
       - mem0_network
     volumes:
-      - ./history:/app/history
+      - ./history:/app/history:Z
     depends_on:
       postgres:
         condition: service_healthy
