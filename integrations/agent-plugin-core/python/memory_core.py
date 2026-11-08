@@ -2322,6 +2322,10 @@ def search_memories(
         filters = {"AND": [filters, {"categories": {"contains": category}}]}
     if run_id:
         filters = {"AND": [filters, {"run_id": run_id}]}
+    try:
+        search_threshold = float(os.environ.get("MEM0_CODE_SEARCH_THRESHOLD", "0.45"))
+    except ValueError:
+        search_threshold = 0.45
     payload = {
         "query": query,
         "app_id": repo.app_id,
@@ -2329,6 +2333,7 @@ def search_memories(
         "top_k": result_limit,
         "rerank": False,
         "latest_only": True,
+        "threshold": search_threshold,
     }
     url = (
         os.environ.get("MEM0_API_URL", DEFAULT_API_URL).rstrip("/")
@@ -2421,8 +2426,23 @@ def format_context(
         ),
         10000,
     )
+    # Conservative injection: session diaries and auto-captured exchanges are
+    # working notes, not decisions. Keep them out of the injected context while
+    # still passing through memories without an explicit type (new-style
+    # category-based writes). Override with MEM0_CODE_TRANSIENT_TYPES (comma list).
+    transient = {
+        part.strip()
+        for part in os.environ.get(
+            "MEM0_CODE_TRANSIENT_TYPES",
+            "session_summary,auto_capture,session_state,task_learning",
+        ).split(",")
+        if part.strip()
+    }
+
     lines = [heading] if heading else []
     for memory in memories:
+        if str((memory.get("metadata") or {}).get("type") or "").strip() in transient:
+            continue
         text = re.sub(
             r"\s+",
             " ",

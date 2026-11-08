@@ -33,11 +33,16 @@ export function loadConfig(): Mem0Config {
     ...fileConfig,
   };
 
-  if (process.env.MEM0_API_KEY) {
+  // Config file wins over env: shells exporting gateway tokens for other
+  // tools (opencode/Codex) must not silently override this plugin's key.
+  if (!config.apiKey && process.env.MEM0_API_KEY) {
     config.apiKey = process.env.MEM0_API_KEY;
   }
-  if (process.env.MEM0_USER_ID) {
+  if (!config.userId && process.env.MEM0_USER_ID) {
     config.userId = process.env.MEM0_USER_ID;
+  }
+  if (!config.baseUrl && process.env.MEM0_BASE_URL) {
+    config.baseUrl = process.env.MEM0_BASE_URL;
   }
 
   return config;

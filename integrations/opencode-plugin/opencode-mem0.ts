@@ -252,7 +252,11 @@ const Mem0Plugin: Plugin = async (ctx) => {
     return {};
   }
 
-  const mem0 = new MemoryClient({apiKey});
+  const baseUrl = process.env.MEM0_BASE_URL?.trim() || undefined;
+  const mem0 = new MemoryClient({
+    apiKey,
+    ...(baseUrl ? {host: baseUrl} : {}),
+  });
   const userId = await getUserId();
   const appId = await getProjectId($);
   const branch = await getBranch($);
@@ -747,33 +751,6 @@ Identity context (resolved at plugin startup):
         }
       } catch {
       }
-    }
-
-    if (msgCount % 3 === 0) {
-      Promise.resolve().then(async () => {
-        try {
-          await mem0.add([{role: "user", content: safeText}], {
-            user_id: userId,
-            app_id: appId,
-            metadata: {
-              type: "auto_capture",
-              source: "opencode",
-              confidence: 0.7,
-              session_id: sessionId,
-              branch,
-            },
-            infer: true,
-          } as any);
-          stats.adds++;
-        } catch {
-        }
-      });
-    }
-
-    if (msgCount % 5 === 0 && stats.adds < Math.floor(msgCount / 3)) {
-      systemContext.push(
-        "After responding, store any new decisions, learnings, or preferences from this exchange via add_memory. Keep it to 1 sentence per memory.",
-      );
     }
 
     captureEvent(

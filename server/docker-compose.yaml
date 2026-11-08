@@ -4,7 +4,7 @@ services:
   mem0:
     build:
       context: ..
-      dockerfile: server/dev.Dockerfile
+      dockerfile: server/selfhost.Dockerfile
     ports:
       - "8888:8000"
     env_file:
@@ -13,12 +13,9 @@ services:
       - mem0_network
     volumes:
       - ./history:/app/history
-      - .:/app
     depends_on:
       postgres:
         condition: service_healthy
-    command: >
-      sh -c "rm -rf /app/packages && pip install -q --force-reinstall --no-deps mem0ai && alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
@@ -28,6 +25,15 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - AUTH_DISABLED=${AUTH_DISABLED:-false}
       - MEM0_TELEMETRY=${MEM0_TELEMETRY:-true}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-v4-flash}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
+      - DASHSCOPE_EMBEDDING_BASE_URL=${DASHSCOPE_EMBEDDING_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - MEM0_DEFAULT_LLM_MODEL=${MEM0_DEFAULT_LLM_MODEL:-gpt-5-mini}
+      - MEM0_DEFAULT_EMBEDDING_MODEL=${MEM0_DEFAULT_EMBEDDING_MODEL:-text-embedding-v4}
+      - MEM0_DEFAULT_EMBEDDING_DIMS=${MEM0_DEFAULT_EMBEDDING_DIMS:-1536}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
 
   postgres:
       image: pgvector/pgvector:pg17
@@ -67,6 +73,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
+  mem0-agent-gateway:
+    restart: on-failure
+    image: mem0-agent-gateway:latest
+    env_file:
+      - ../../gateway.env
+    networks:
+      - mem0_network
+    depends_on:
+      mem0:
+        condition: service_started
+    ports:
+      - "8765:8765"
 
 volumes:
   postgres_db:

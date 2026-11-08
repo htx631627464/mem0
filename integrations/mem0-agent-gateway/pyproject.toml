@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mem0-agent-gateway"
+version = "0.1.0"
+description = "Self-hosted Mem0 gateway for agent plugins and MCP clients"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+dependencies = [
+  "fastapi>=0.115.8",
+  "httpx>=0.28.1",
+  "uvicorn>=0.34.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.2.2",
+  "pytest-asyncio>=0.23.7",
+]
+
+[project.scripts]
+mem0-agent-gateway = "mem0_agent_gateway.main:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mem0_agent_gateway"]
