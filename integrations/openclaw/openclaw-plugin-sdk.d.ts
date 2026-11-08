@@ -1,7 +1,7 @@
 declare module "openclaw/plugin-sdk" {
   export interface MemoryArtifact {
     id: string;
-    type: "memory" | "dream" | "digest" | "entity";
+    type: "memory" | "digest" | "entity";
     title: string;
     content: string;
     metadata?: Record<string, unknown>;
@@ -26,6 +26,7 @@ declare module "openclaw/plugin-sdk" {
 
   export interface OpenClawPluginApi {
     pluginConfig: Record<string, unknown>;
+    registrationMode?: "full" | "cli-metadata" | string;
     logger: {
       info(msg: string): void;
       warn(msg: string): void;

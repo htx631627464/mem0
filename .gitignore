@@ -8,16 +8,16 @@ __pycache__/
 server/history/
 server/.env
 
-# Local deployment credentials & notes (never commit)
-dev/docs/*credentials*.md
-dev/docs/*secret*.md
-
 # C extensions
 *.so
 
 # Distribution / packaging
 .Python
 build/
+!integrations/agent-plugin-core/build/
+!integrations/agent-plugin-core/build/*.py
+!integrations/agent-plugin-core/build/schemas/
+!integrations/agent-plugin-core/build/schemas/*.json
 develop-eggs/
 dist/
 downloads/
@@ -193,3 +193,9 @@ eval/
 qdrant_storage/
 .crossnote
 testing.ipynb
+.weave/
+
+
+# TypeScript incremental build info and local, uncommitted e2e scripts (used by the integrations, e.g. integrations/deepseek-plugin)
+*.tsbuildinfo
+*.local.mjs

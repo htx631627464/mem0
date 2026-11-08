@@ -16,8 +16,9 @@ class TestPGVector(unittest.TestCase):
         """Set up test fixtures."""
         self.mock_conn = MagicMock()
         self.mock_cursor = MagicMock()
+        self.mock_cursor.rowcount = 1
         self.mock_conn.cursor.return_value = self.mock_cursor
-        
+
         # Mock connection pool
         self.mock_pool_psycopg2 = MagicMock()
         self.mock_pool_psycopg2.getconn.return_value = self.mock_conn
@@ -711,7 +712,7 @@ class TestPGVector(unittest.TestCase):
         mock_get_cursor.return_value.__exit__.return_value = None
         
         self.mock_cursor.fetchall.return_value = []  # No existing collections
-        self.mock_cursor.fetchone.return_value = (self.test_ids[0], [0.1, 0.2, 0.3], {"key": "value1"})
+        self.mock_cursor.fetchone.return_value = (self.test_ids[0], {"key": "value1"})
         
         pgvector = PGVector(
             dbname="test_db",
@@ -734,7 +735,7 @@ class TestPGVector(unittest.TestCase):
         
         # Verify get query was executed
         get_calls = [call for call in self.mock_cursor.execute.call_args_list 
-                    if "SELECT id, vector, payload" in str(call)]
+                    if "SELECT id, payload" in str(call)]
         self.assertTrue(len(get_calls) > 0)
         
         # Verify result
@@ -756,7 +757,7 @@ class TestPGVector(unittest.TestCase):
         mock_get_cursor.return_value.__exit__.return_value = None
         
         self.mock_cursor.fetchall.return_value = []  # No existing collections
-        self.mock_cursor.fetchone.return_value = (self.test_ids[0], [0.1, 0.2, 0.3], {"key": "value1"})
+        self.mock_cursor.fetchone.return_value = (self.test_ids[0], {"key": "value1"})
         
         pgvector = PGVector(
             dbname="test_db",
@@ -779,7 +780,7 @@ class TestPGVector(unittest.TestCase):
         
         # Verify get query was executed
         get_calls = [call for call in self.mock_cursor.execute.call_args_list 
-                    if "SELECT id, vector, payload" in str(call)]
+                    if "SELECT id, payload" in str(call)]
         self.assertTrue(len(get_calls) > 0)
         
         # Verify result
@@ -1050,8 +1051,8 @@ class TestPGVector(unittest.TestCase):
         mock_get_cursor.return_value.__exit__.return_value = None
         
         self.mock_cursor.fetchall.return_value = [
-            (self.test_ids[0], [0.1, 0.2, 0.3], {"key": "value1"}),
-            (self.test_ids[1], [0.4, 0.5, 0.6], {"key": "value2"}),
+            (self.test_ids[0], {"key": "value1"}),
+            (self.test_ids[1], {"key": "value2"}),
         ]
         
         pgvector = PGVector(
@@ -1075,7 +1076,7 @@ class TestPGVector(unittest.TestCase):
         
         # Verify list query was executed
         list_calls = [call for call in self.mock_cursor.execute.call_args_list 
-                     if "SELECT id, vector, payload" in str(call)]
+                     if "SELECT id, payload" in str(call)]
         self.assertTrue(len(list_calls) > 0)
         
         # Verify result
@@ -1098,8 +1099,8 @@ class TestPGVector(unittest.TestCase):
         mock_get_cursor.return_value.__exit__.return_value = None
         
         self.mock_cursor.fetchall.return_value = [
-            (self.test_ids[0], [0.1, 0.2, 0.3], {"key": "value1"}),
-            (self.test_ids[1], [0.4, 0.5, 0.6], {"key": "value2"}),
+            (self.test_ids[0], {"key": "value1"}),
+            (self.test_ids[1], {"key": "value2"}),
         ]
         
         pgvector = PGVector(
@@ -1123,7 +1124,7 @@ class TestPGVector(unittest.TestCase):
         
         # Verify list query was executed
         list_calls = [call for call in self.mock_cursor.execute.call_args_list 
-                     if "SELECT id, vector, payload" in str(call)]
+                     if "SELECT id, payload" in str(call)]
         self.assertTrue(len(list_calls) > 0)
         
         # Verify result
@@ -1440,7 +1441,7 @@ class TestPGVector(unittest.TestCase):
         mock_get_cursor.return_value.__exit__.return_value = None
         
         self.mock_cursor.fetchall.return_value = [
-            (self.test_ids[0], [0.1, 0.2, 0.3], {"user_id": "alice", "agent_id": "agent1"}),
+            (self.test_ids[0], {"user_id": "alice", "agent_id": "agent1"}),
         ]
         
         pgvector = PGVector(
@@ -1465,7 +1466,7 @@ class TestPGVector(unittest.TestCase):
         
         # Verify list query was executed with filters
         list_calls = [call for call in self.mock_cursor.execute.call_args_list 
-                     if "SELECT id, vector, payload" in str(call) and "WHERE" in str(call)]
+                     if "SELECT id, payload" in str(call) and "WHERE" in str(call)]
         self.assertTrue(len(list_calls) > 0)
         
         # Verify results
@@ -1489,7 +1490,7 @@ class TestPGVector(unittest.TestCase):
         mock_get_cursor.return_value.__exit__.return_value = None
         
         self.mock_cursor.fetchall.return_value = [
-            (self.test_ids[0], [0.1, 0.2, 0.3], {"user_id": "alice", "agent_id": "agent1"}),
+            (self.test_ids[0], {"user_id": "alice", "agent_id": "agent1"}),
         ]
         
         pgvector = PGVector(
@@ -1514,7 +1515,7 @@ class TestPGVector(unittest.TestCase):
         
         # Verify list query was executed with filters
         list_calls = [call for call in self.mock_cursor.execute.call_args_list 
-                     if "SELECT id, vector, payload" in str(call) and "WHERE" in str(call)]
+                     if "SELECT id, payload" in str(call) and "WHERE" in str(call)]
         self.assertTrue(len(list_calls) > 0)
         
         # Verify results
@@ -1538,7 +1539,7 @@ class TestPGVector(unittest.TestCase):
         mock_get_cursor.return_value.__exit__.return_value = None
         
         self.mock_cursor.fetchall.return_value = [
-            (self.test_ids[0], [0.1, 0.2, 0.3], {"user_id": "alice"}),
+            (self.test_ids[0], {"user_id": "alice"}),
         ]
         
         pgvector = PGVector(
@@ -1563,7 +1564,7 @@ class TestPGVector(unittest.TestCase):
         
         # Verify list query was executed with single filter
         list_calls = [call for call in self.mock_cursor.execute.call_args_list 
-                     if "SELECT id, vector, payload" in str(call) and "WHERE" in str(call)]
+                     if "SELECT id, payload" in str(call) and "WHERE" in str(call)]
         self.assertTrue(len(list_calls) > 0)
         
         # Verify results
@@ -1586,7 +1587,7 @@ class TestPGVector(unittest.TestCase):
         mock_get_cursor.return_value.__exit__.return_value = None
         
         self.mock_cursor.fetchall.return_value = [
-            (self.test_ids[0], [0.1, 0.2, 0.3], {"user_id": "alice"}),
+            (self.test_ids[0], {"user_id": "alice"}),
         ]
         
         pgvector = PGVector(
@@ -1611,7 +1612,7 @@ class TestPGVector(unittest.TestCase):
         
         # Verify list query was executed with single filter
         list_calls = [call for call in self.mock_cursor.execute.call_args_list 
-                     if "SELECT id, vector, payload" in str(call) and "WHERE" in str(call)]
+                     if "SELECT id, payload" in str(call) and "WHERE" in str(call)]
         self.assertTrue(len(list_calls) > 0)
         
         # Verify results
@@ -1634,8 +1635,8 @@ class TestPGVector(unittest.TestCase):
         mock_get_cursor.return_value.__exit__.return_value = None
         
         self.mock_cursor.fetchall.return_value = [
-            (self.test_ids[0], [0.1, 0.2, 0.3], {"key": "value1"}),
-            (self.test_ids[1], [0.4, 0.5, 0.6], {"key": "value2"}),
+            (self.test_ids[0], {"key": "value1"}),
+            (self.test_ids[1], {"key": "value2"}),
         ]
         
         pgvector = PGVector(
@@ -1659,7 +1660,7 @@ class TestPGVector(unittest.TestCase):
         
         # Verify list query was executed without WHERE clause
         list_calls = [call for call in self.mock_cursor.execute.call_args_list 
-                     if "SELECT id, vector, payload" in str(call) and "WHERE" not in str(call)]
+                     if "SELECT id, payload" in str(call) and "WHERE" not in str(call)]
         self.assertTrue(len(list_calls) > 0)
         
         # Verify results
@@ -1682,8 +1683,8 @@ class TestPGVector(unittest.TestCase):
         mock_get_cursor.return_value.__exit__.return_value = None
         
         self.mock_cursor.fetchall.return_value = [
-            (self.test_ids[0], [0.1, 0.2, 0.3], {"key": "value1"}),
-            (self.test_ids[1], [0.4, 0.5, 0.6], {"key": "value2"}),
+            (self.test_ids[0], {"key": "value1"}),
+            (self.test_ids[1], {"key": "value2"}),
         ]
         
         pgvector = PGVector(
@@ -1707,7 +1708,7 @@ class TestPGVector(unittest.TestCase):
         
         # Verify list query was executed without WHERE clause
         list_calls = [call for call in self.mock_cursor.execute.call_args_list 
-                     if "SELECT id, vector, payload" in str(call) and "WHERE" not in str(call)]
+                     if "SELECT id, payload" in str(call) and "WHERE" not in str(call)]
         self.assertTrue(len(list_calls) > 0)
         
         # Verify results
@@ -2122,6 +2123,43 @@ class TestPGVector(unittest.TestCase):
                                if "UPDATE" in str(call) and "SET payload" in str(call)]
         self.assertTrue(len(payload_update_calls) > 0, "Empty payload {} should still trigger UPDATE")
 
+    @patch('mem0.vector_stores.pgvector.PSYCOPG_VERSION', 3)
+    @patch('mem0.vector_stores.pgvector.ConnectionPool')
+    @patch.object(PGVector, '_get_cursor')
+    def test_update_reports_whether_the_record_exists(self, mock_get_cursor, mock_connection_pool):
+        """update() returns False for a missing ID without inserting, and True for an existing ID."""
+        mock_get_cursor.return_value.__enter__.return_value = self.mock_cursor
+        self.mock_cursor.fetchall.return_value = [("test_collection",)]
+        pgvector = PGVector(
+            dbname="test_db",
+            collection_name="test_collection",
+            embedding_model_dims=3,
+            user="test_user",
+            password="test_pass",
+            host="localhost",
+            port=5432,
+            diskann=False,
+            hnsw=False,
+        )
+
+        self.mock_cursor.rowcount = 0
+        self.assertIs(pgvector.update("missing-id", vector=[0.1, 0.2, 0.3], payload={"data": "x"}), False)
+        statements = [str(c.args[0]) for c in self.mock_cursor.execute.call_args_list]
+        self.assertFalse([s for s in statements if "INSERT" in s or "ON CONFLICT" in s])
+
+        self.mock_cursor.rowcount = 1
+        self.mock_cursor.execute.reset_mock()
+        self.assertIs(pgvector.update("existing-id", payload={"data": "y"}), True)
+        query, params = self.mock_cursor.execute.call_args.args
+        self.assertIn("SET payload = %s WHERE id = %s", str(query))
+        self.assertEqual((params[0].obj, params[1]), ({"data": "y"}, "existing-id"))
+        self.assertEqual(self.mock_cursor.execute.call_count, 1)
+
+        self.mock_cursor.execute.reset_mock()
+        self.assertIs(pgvector.update("existing-id", vector=[0.4, 0.5, 0.6]), True)
+        self.assertEqual(self.mock_cursor.execute.call_args.args[1], ([0.4, 0.5, 0.6], "existing-id"))
+        self.assertIsNone(pgvector.update("existing-id"))
+
     # Enhanced Tests for Connection String Handling
     @patch('mem0.vector_stores.pgvector.PSYCOPG_VERSION', 3)
     @patch('mem0.vector_stores.pgvector.ConnectionPool')
@@ -2508,3 +2546,20 @@ class TestBuildFilterConditions(unittest.TestCase):
     def test_numeric_scalar_becomes_string(self):
         conditions, params = _build_filter_conditions({"priority": 42})
         self.assertEqual(params, ["priority", "42"])
+
+    def test_in_rejects_string_value(self):
+        """Passing a string to 'in' would iterate characters and produce a misleading ANY() clause."""
+        with self.assertRaises(ValueError, msg="Expected ValueError for non-list 'in' value"):
+            _build_filter_conditions({"user_id": {"in": "alice"}})
+
+    def test_in_rejects_dict_value(self):
+        with self.assertRaises(ValueError):
+            _build_filter_conditions({"user_id": {"in": {"$gt": 0}}})
+
+    def test_nin_rejects_string_value(self):
+        with self.assertRaises(ValueError):
+            _build_filter_conditions({"user_id": {"nin": "alice"}})
+
+    def test_in_accepts_list_value(self):
+        conditions, params = _build_filter_conditions({"user_id": {"in": ["alice", "bob"]}})
+        self.assertEqual(params, ["user_id", ["alice", "bob"]])

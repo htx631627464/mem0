@@ -49,7 +49,7 @@ def test_openai_provider_when_only_openai_key_present(monkeypatch: pytest.Monkey
 
     assert config["llm"]["provider"] == "openai"
     assert config["llm"]["config"]["api_key"] == "sk-openai"
-    assert config["llm"]["config"]["model"] == "gpt-4.1-nano-2025-04-14"
+    assert config["llm"]["config"]["model"] == "gpt-5-mini"
     assert config["llm"]["config"]["temperature"] == 0.2
     assert config["embedder"]["provider"] == "openai"
     assert config["embedder"]["config"]["api_key"] == "sk-openai"

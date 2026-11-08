@@ -37,6 +37,10 @@ def _validate_identifier(name: str, label: str = "identifier") -> str:
         )
     return name
 
+# Filter keys are interpolated into `JSON_EXTRACT(payload, '$.<key>')` strings,
+# so we whitelist identifier-safe keys and skip anything else (logged as a warning).
+_VALID_FILTER_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
 
 class OutputData(BaseModel):
     id: Optional[str]
@@ -290,6 +294,9 @@ class AzureMySQL(VectorStoreBase):
 
         if filters:
             for k, v in filters.items():
+                if not _VALID_FILTER_KEY.match(k):
+                    logger.warning("Skipping invalid filter key: %r", k)
+                    continue
                 filter_conditions.append("JSON_EXTRACT(payload, %s) = %s")
                 filter_params.extend([f"$.{k}", json.dumps(v)])
 
@@ -346,6 +353,9 @@ class AzureMySQL(VectorStoreBase):
 
             if filters:
                 for k, v in filters.items():
+                    if not _VALID_FILTER_KEY.match(k):
+                        logger.warning("Skipping invalid filter key: %r", k)
+                        continue
                     filter_conditions.append("JSON_EXTRACT(payload, %s) = %s")
                     filter_params.extend([f"$.{k}", json.dumps(v)])
 
@@ -403,7 +413,13 @@ class AzureMySQL(VectorStoreBase):
             vector (List[float], optional): Updated vector
             payload (Dict, optional): Updated payload
         """
+        if vector is None and payload is None:
+            return None
         with self._get_cursor(commit=True) as cur:
+            # MySQL's rowcount leaves out matched rows whose values did not change, so check existence under a row lock.
+            cur.execute(f"SELECT 1 FROM `{self.collection_name}` WHERE id = %s FOR UPDATE", (vector_id,))
+            if cur.fetchone() is None:
+                return False
             if vector is not None:
                 cur.execute(
                     f"UPDATE `{self.collection_name}` SET vector = %s WHERE id = %s",
@@ -414,6 +430,7 @@ class AzureMySQL(VectorStoreBase):
                     f"UPDATE `{self.collection_name}` SET payload = %s WHERE id = %s",
                     (json.dumps(payload), vector_id),
                 )
+        return True
 
     def get(self, vector_id: str) -> Optional[OutputData]:
         """
@@ -502,6 +519,9 @@ class AzureMySQL(VectorStoreBase):
 
         if filters:
             for k, v in filters.items():
+                if not _VALID_FILTER_KEY.match(k):
+                    logger.warning("Skipping invalid filter key: %r", k)
+                    continue
                 filter_conditions.append("JSON_EXTRACT(payload, %s) = %s")
                 filter_params.extend([f"$.{k}", json.dumps(v)])
 

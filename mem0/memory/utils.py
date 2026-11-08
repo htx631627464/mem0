@@ -26,11 +26,11 @@ def _with_current_date(system_prompt: str) -> str:
 
 def get_fact_retrieval_messages(message, is_agent_memory=False):
     """Get fact retrieval messages based on the memory type.
-    
+
     Args:
         message: The message content to extract facts from
         is_agent_memory: If True, use agent memory extraction prompt, else use user memory extraction prompt
-        
+
     Returns:
         tuple: (system_prompt, user_prompt)
     """
@@ -73,12 +73,18 @@ def ensure_json_instruction(system_prompt, user_prompt):
 def parse_messages(messages):
     response = ""
     for msg in messages:
-        if msg["role"] == "system":
-            response += f"system: {msg['content']}\n"
-        if msg["role"] == "user":
-            response += f"user: {msg['content']}\n"
-        if msg["role"] == "assistant":
-            response += f"assistant: {msg['content']}\n"
+        role = msg.get("role")
+        content = msg.get("content")
+        # Skip messages without textual content (e.g. assistant tool-call
+        # messages that carry `tool_calls` but no `content` key).
+        if content is None:
+            continue
+        if role == "system":
+            response += f"system: {content}\n"
+        elif role == "user":
+            response += f"user: {content}\n"
+        elif role == "assistant":
+            response += f"assistant: {content}\n"
     return response
 
 
@@ -127,6 +133,16 @@ def remove_code_blocks(content: str) -> str:
     - If a code block is detected, it returns only the inner content, stripping out the markers.
     - If no code block markers are found, the original content is returned as-is.
     """
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                parts.append(block.get("text", ""))
+        content = "".join(parts)
+    if not isinstance(content, str):
+        return ""
     pattern = r"^```[a-zA-Z0-9]*\n([\s\S]*?)\n```$"
     match = re.match(pattern, content.strip())
     match_res=match.group(1).strip() if match else content.strip()
@@ -185,23 +201,42 @@ def parse_vision_messages(messages, llm=None, vision_details="auto"):
     """
     returned_messages = []
     for msg in messages:
-        if msg["role"] == "system":
+        role = msg.get("role")
+        content = msg.get("content")
+        if role == "system":
             returned_messages.append(msg)
             continue
 
+        # Skip messages without content (e.g. assistant tool-call messages
+        # that carry `tool_calls` but no `content` key).
+        if content is None:
+            continue
+
         # Handle message content
-        if isinstance(msg["content"], list):
-            # Multiple image URLs in content
-            description = get_image_description(msg, llm, vision_details)
-            returned_messages.append({"role": msg["role"], "content": description})
-        elif isinstance(msg["content"], dict) and msg["content"].get("type") == "image_url":
-            # Single image content
-            image_url = msg["content"]["image_url"]["url"]
+        if isinstance(content, list):
+            if llm is None:
+                text_parts = [
+                    part["text"] for part in msg["content"]
+                    if isinstance(part, dict) and part.get("type") == "text"
+                ]
+                if not text_parts:
+                    continue
+                returned_messages.append({"role": role, "content": " ".join(text_parts)})
+            else:
+                description = get_image_description(msg, llm, vision_details)
+                returned_messages.append({"role": role, "content": description})
+        elif isinstance(content, dict) and content.get("type") == "image_url":
+            if llm is None:
+                continue
+            image_url_obj = content.get("image_url")
+            image_url = image_url_obj.get("url") if isinstance(image_url_obj, dict) else None
+            if not image_url:
+                raise ValueError("image_url content part is missing image_url.url")
             try:
                 description = get_image_description(image_url, llm, vision_details)
-                returned_messages.append({"role": msg["role"], "content": description})
-            except Exception:
-                raise Exception(f"Error while downloading {image_url}.")
+                returned_messages.append({"role": role, "content": description})
+            except Exception as e:
+                raise Exception(f"Error while downloading {image_url}.") from e
         else:
             # Regular text content
             returned_messages.append(msg)
@@ -214,7 +249,7 @@ def process_telemetry_filters(filters):
     Process the telemetry filters
     """
     if filters is None:
-        return {}
+        return [], {}
 
     encoded_ids = {}
     if "user_id" in filters:

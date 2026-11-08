@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "mem0": {
-      "type": "http",
-      "url": "http://127.0.0.1:8765/mcp",
-      "bearer_token_env_var": "MEM0_API_KEY"
-    }
-  }
-}

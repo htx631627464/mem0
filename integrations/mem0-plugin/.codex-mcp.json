@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "mem0": {
-      "url_env_var": "MEM0_MCP_URL",
-      "bearer_token_env_var": "MEM0_API_KEY"
-    }
-  }
-}

@@ -1,4 +1,5 @@
 import importlib
+import inspect
 from typing import Dict, Optional, Union
 
 from mem0.configs.embeddings.base import BaseEmbedderConfig
@@ -7,6 +8,7 @@ from mem0.configs.llms.aws_bedrock import AWSBedrockConfig
 from mem0.configs.llms.azure import AzureOpenAIConfig
 from mem0.configs.llms.base import BaseLlmConfig
 from mem0.configs.llms.deepseek import DeepSeekConfig
+from mem0.configs.llms.gemini import GeminiConfig
 from mem0.configs.llms.lmstudio import LMStudioConfig
 from mem0.configs.llms.minimax import MinimaxConfig
 from mem0.configs.llms.ollama import OllamaConfig
@@ -17,7 +19,9 @@ from mem0.configs.rerankers.base import BaseRerankerConfig
 from mem0.configs.rerankers.cohere import CohereRerankerConfig
 from mem0.configs.rerankers.huggingface import HuggingFaceRerankerConfig
 from mem0.configs.rerankers.llm import LLMRerankerConfig
-from mem0.configs.rerankers.sentence_transformer import SentenceTransformerRerankerConfig
+from mem0.configs.rerankers.sentence_transformer import (
+    SentenceTransformerRerankerConfig,
+)
 from mem0.configs.rerankers.zero_entropy import ZeroEntropyRerankerConfig
 from mem0.embeddings.mock import MockEmbeddings
 
@@ -46,7 +50,7 @@ class LlmFactory:
         "openai_structured": ("mem0.llms.openai_structured.OpenAIStructuredLLM", OpenAIConfig),
         "anthropic": ("mem0.llms.anthropic.AnthropicLLM", AnthropicConfig),
         "azure_openai_structured": ("mem0.llms.azure_openai_structured.AzureOpenAIStructuredLLM", AzureOpenAIConfig),
-        "gemini": ("mem0.llms.gemini.GeminiLLM", BaseLlmConfig),
+        "gemini": ("mem0.llms.gemini.GeminiLLM", GeminiConfig),
         "deepseek": ("mem0.llms.deepseek.DeepSeekLLM", DeepSeekConfig),
         "minimax": ("mem0.llms.minimax.MiniMaxLLM", MinimaxConfig),
         "xai": ("mem0.llms.xai.XAILLM", XAIConfig),
@@ -84,7 +88,7 @@ class LlmFactory:
             config = config_class(**kwargs)
         elif isinstance(config, dict):
             # Merge dict config with kwargs
-            config.update(kwargs)
+            config = {**config, **kwargs}
             config = config_class(**config)
         elif isinstance(config, BaseLlmConfig):
             # Convert base config to provider-specific config if needed
@@ -99,8 +103,16 @@ class LlmFactory:
                     "top_k": config.top_k,
                     "enable_vision": config.enable_vision,
                     "vision_details": config.vision_details,
-                    "http_client_proxies": config.http_client,
+                    "http_client_proxies": config.http_client_proxies,
                 }
+                # Only forward reasoning fields to provider configs that accept them
+                # (explicitly or via **kwargs); others would raise on unexpected kwargs.
+                params = inspect.signature(config_class).parameters
+                accepts_kwargs = any(p.kind == p.VAR_KEYWORD for p in params.values())
+                if accepts_kwargs or "reasoning_effort" in params:
+                    config_dict["reasoning_effort"] = config.reasoning_effort
+                if accepts_kwargs or "is_reasoning_model" in params:
+                    config_dict["is_reasoning_model"] = config.is_reasoning_model
                 config_dict.update(kwargs)
                 config = config_class(**config_dict)
             else:
@@ -191,6 +203,7 @@ class VectorStoreFactory:
         "cassandra": "mem0.vector_stores.cassandra.CassandraDB",
         "neptune": "mem0.vector_stores.neptune_analytics.NeptuneAnalyticsVector",
         "turbopuffer": "mem0.vector_stores.turbopuffer.TurbopufferDB",
+        "oracledb": "mem0.vector_stores.oracledb.OracleAIVectorSearch",
     }
 
     @classmethod

@@ -2,8 +2,9 @@
  * Regression tests for per-agent memory isolation helpers and
  * message filtering logic.
  */
-import { describe, it, expect } from "vitest";
-import {
+import { describe, it, expect, vi } from "vitest";
+import { createMemoryLifecycle } from "../agent-plugin-core/typescript/src/lifecycle.ts";
+import memoryPlugin, {
   extractAgentId,
   effectiveUserId,
   agentUserId,
@@ -15,6 +16,47 @@ import {
   stripNoiseFromContent,
   filterMessagesForExtraction,
 } from "./index.ts";
+
+function createPluginApi(registrationMode?: string) {
+  return {
+    pluginConfig: {
+      mode: "platform",
+      apiKey: "test-api-key",
+      userId: "alice",
+    },
+    registrationMode,
+    logger: {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    },
+    resolvePath: vi.fn((p: string) => p),
+    registerTool: vi.fn(),
+    on: vi.fn(),
+    registerCli: vi.fn(),
+    registerCommand: vi.fn(),
+    registerService: vi.fn(),
+    registerMemoryCapability: vi.fn(),
+  };
+}
+
+describe("plugin registration modes", () => {
+  it("keeps cli-metadata registration free of runtime side effects", () => {
+    const api = createPluginApi("cli-metadata");
+
+    memoryPlugin.register(api as any);
+
+    expect(api.registerCli).toHaveBeenCalledTimes(1);
+    expect(api.registerService).not.toHaveBeenCalled();
+    expect(api.registerMemoryCapability).not.toHaveBeenCalled();
+    expect(api.registerTool).not.toHaveBeenCalled();
+    expect(api.on).not.toHaveBeenCalled();
+    expect(api.logger.info).not.toHaveBeenCalledWith(
+      expect.stringContaining("openclaw-mem0: registered"),
+    );
+  });
+});
 
 // ---------------------------------------------------------------------------
 // extractAgentId
@@ -480,13 +522,14 @@ What is the deployment plan?`,
     expect(result[0].content).toBe("What is the deployment plan?");
   });
 
-  it("truncates long messages", () => {
-    const longContent = "A".repeat(3000);
-    const messages = [{ role: "assistant", content: longContent }];
-    const result = filterMessagesForExtraction(messages);
-    expect(result).toHaveLength(1);
-    expect(result[0].content.length).toBeLessThan(2100);
-    expect(result[0].content).toContain("[...truncated]");
+  it.each(["user", "assistant"])("preserves long %s messages through extraction preparation", (role) => {
+    const content = "Repository detail. ".repeat(600) + "Final requirement. password=hidden-extraction-secret";
+    const result = createMemoryLifecycle().prepareConversation(
+      filterMessagesForExtraction([{ role, content }]),
+    );
+    expect(result).toEqual([
+      { role, content: content.replace("hidden-extraction-secret", "[REDACTED]") },
+    ]);
   });
 
   it("returns empty array when all messages are noise", () => {

@@ -26,7 +26,7 @@ def build_default_config(env: dict[str, str] | None = None) -> dict:
     deepseek_api_key = env.get("DEEPSEEK_API_KEY")
     dashscope_api_key = env.get("DASHSCOPE_API_KEY")
 
-    default_llm_model = env.get("MEM0_DEFAULT_LLM_MODEL", "gpt-4.1-nano-2025-04-14")
+    default_llm_model = env.get("MEM0_DEFAULT_LLM_MODEL", "gpt-5-mini")
     default_embedder_model = env.get("MEM0_DEFAULT_EMBEDDING_MODEL", "text-embedding-3-small")
     default_embedding_dims = int(env.get("MEM0_DEFAULT_EMBEDDING_DIMS", "1536"))
 

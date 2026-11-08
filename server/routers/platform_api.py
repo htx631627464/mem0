@@ -20,7 +20,7 @@ from auth import (
     _mark_auth_type,
     _resolve_user_from_api_key,
 )
-from db import get_db
+from db import SessionLocal
 from errors import upstream_error
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from models import User
@@ -35,7 +35,6 @@ async def verify_platform_auth(
     request: Request,
     authorization: Optional[str] = Header(None),
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
-    db=Depends(get_db),
 ) -> Optional[User]:
     """Authenticate platform clients via ``Authorization: Token <key>``.
 
@@ -64,7 +63,9 @@ async def verify_platform_auth(
         _mark_auth_type(request, "admin_api_key")
         return None
 
-    user = _resolve_user_from_api_key(token, db)
+    user = None
+    with SessionLocal() as db:
+        user = _resolve_user_from_api_key(token, db)
     if user is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     _mark_auth_type(request, "api_key")
