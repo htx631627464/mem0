@@ -25,6 +25,7 @@ from errors import upstream_error
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from models import User
 from pydantic import BaseModel, Field
+from memory_policy import drop_user_narration
 from server_state import get_memory_instance
 
 router = APIRouter(tags=["platform-api"])
@@ -133,9 +134,11 @@ def platform_add(body: PlatformAddRequest, _auth=Depends(verify_platform_auth)):
         params["infer"] = body.infer
 
     try:
-        return get_memory_instance().add(
+        memory = get_memory_instance()
+        response = memory.add(
             messages=[m.model_dump() for m in body.messages], **params
         )
+        return drop_user_narration(memory, response)
     except Exception:
         raise upstream_error()
 

@@ -131,19 +131,13 @@ else
 fi
 
 cat <<BANNER
-## Mem0 Active
+## Mem0
 
 \`user=${_UID}${_ANN} | ${_SCOPE_LABEL} | branch=${_BR} | memories=${MEM0_COUNT}\`
 
-IMPORTANT: In your FIRST response, display this exact status line as your opening line:
-
-\`\`\`
-Mem0 Active | user=${_UID}${_ANN} | ${_SCOPE_LABEL} | branch=${_BR} | memories=${MEM0_COUNT}
-\`\`\`
-
 ${_SCOPE_INSTR}
 
-After completing any task, decision, or meaningful exchange, proactively store learnings via \`add_memory\`. Do NOT wait until the session ends — store memories incrementally as work progresses. Focus on: decisions made, bugs fixed, patterns discovered, user preferences, or task outcomes. Aim for 1–3 memories per substantial interaction.
+Store a memory only when the user confirms a decision that will matter in a later task. Write that decision in Simplified Chinese, with \`infer=false\` and \`metadata.type=decision\`. Do not store session progress, assistant proposals, or copies of files already in the repository.
 
 BANNER
 
@@ -162,9 +156,9 @@ fi
 
 if [ "$SOURCE" = "startup" ]; then
   if [ "$MEM0_COUNT" = "0" ]; then
-    echo "New project with 0 memories. Invoke the mem0:onboard skill to import project files. Coding categories install automatically in the background."
+    echo "This project has no stored memories yet. Project files stay in the repository."
   else
-    echo "Search mem0 for recent decisions and task learnings before responding. Run 2 parallel searches: one for decision type, one for task_learning type."
+    echo "Below are stored decisions and bug fixes for this project. Use them when they match the current task."
 
     # Inject compact recent activity timeline (non-blocking, 5s timeout)
     # Use perl alarm as portable timeout (macOS lacks GNU timeout)
@@ -181,8 +175,7 @@ if [ "$SOURCE" = "startup" ]; then
     echo "Native MEMORY.md detected at ${_MEMORY_MD}. Add autoMemoryEnabled:false to settings.json or run /mem0:import."
   fi
 
-  MEM0_CWD="$MEM0_CWD_RESOLVED" \
-    python3 "$SCRIPT_DIR/auto_import.py" 2>/dev/null &
+  # Project files stay in the repository. Do not copy them into mem0 on startup.
 
   # Configure the coding-category taxonomy in the background (idempotent, never blocks).
   # Prefer the venv python since this path needs the mem0ai SDK.
@@ -194,13 +187,10 @@ if [ "$SOURCE" = "startup" ]; then
   fi
 
 elif [ "$SOURCE" = "resume" ]; then
-  echo "Session resumed. Search mem0 for session_state and decision memories to pick up where you left off. Run 2 parallel searches."
+  echo "Session resumed. The decisions listed for this project are the memories to carry forward."
 
 elif [ "$SOURCE" = "compact" ]; then
-  echo "Context compacted. Search mem0 for session_state and decision memories to recover context. Run 2 parallel searches."
-  if [ "${MEM0_AUTO_SAVE:-true}" != "false" ]; then
-    printf '%s' "$INPUT" | python3 "$SCRIPT_DIR/capture_compact_summary.py" 2>/dev/null &
-  fi
+  echo "Context compacted. Use the stored decisions for this project if they match the current task."
 fi
 
 python3 "$SCRIPT_DIR/telemetry.py" session_start --source="$SOURCE" --memory_count="${MEM0_COUNT:-0}" 2>/dev/null &

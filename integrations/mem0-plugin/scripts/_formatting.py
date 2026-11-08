@@ -6,6 +6,15 @@ and any future hook that displays memories.
 
 from __future__ import annotations
 
+# Injected into a new task. Session diaries and copied project files stay in the store.
+STABLE_TYPES = ("decision", "bug_fix")
+
+
+def is_stable_memory(memory: dict) -> bool:
+    meta = memory.get("metadata") or {}
+    return (meta.get("type") or "").strip() in STABLE_TYPES
+
+
 TYPE_ICONS = {
     "decision": "⚖️",
     "anti_pattern": "\U0001f534",

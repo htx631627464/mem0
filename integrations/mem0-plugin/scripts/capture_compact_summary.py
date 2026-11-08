@@ -136,6 +136,10 @@ def store_summary(api_key: str, summary: str, user_id: str, session_id: str, pro
 
 
 def main():
+    """Do not store compaction text as a long-term memory."""
+    log.debug("Automatic compact summary capture is disabled")
+    return
+
     api_key = resolve_api_key()
     if not api_key:
         log.debug("MEM0_API_KEY not set, skipping capture")

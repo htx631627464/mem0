@@ -18,12 +18,11 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _api import api_url
-from _formatting import TYPE_ICONS, format_age
+from _formatting import STABLE_TYPES, TYPE_ICONS, format_age, is_stable_memory
 from _identity import resolve_api_key, resolve_user_id
 from _project import resolve_project_id
 
-MAX_RECENT = 10
-MAX_SUMMARIES = 3
+MAX_RECENT = 8
 FETCH_TIMEOUT = 5
 
 
@@ -34,7 +33,13 @@ def fetch_recent_memories(api_key: str, user_id: str, project_id: str) -> list[d
     if global_search:
         filters = {"OR": [{"user_id": "*"}]}
     else:
-        filters = {"AND": [{"user_id": user_id}, {"app_id": project_id}]}
+        filters = {
+            "AND": [
+                {"user_id": user_id},
+                {"app_id": project_id},
+                {"type": {"in": list(STABLE_TYPES)}},
+            ]
+        }
 
     body = json.dumps({"filters": filters}).encode()
     req = urllib.request.Request(
@@ -63,7 +68,11 @@ def format_timeline(memories: list[dict]) -> str:
     if not memories:
         return ""
 
-    lines = ["### Recent Activity", ""]
+    memories = [m for m in memories if is_stable_memory(m)]
+    if not memories:
+        return ""
+
+    lines = ["### 可沿用的决定", ""]
 
     for m in memories:
         mid = m.get("id", "?")[:8]
@@ -74,9 +83,6 @@ def format_timeline(memories: list[dict]) -> str:
         age = format_age(m)
         age_str = f" ({age})" if age else ""
         lines.append(f"- {icon} [{cat}]{age_str} {text} [mem0:{mid}]")
-
-    lines.append("")
-    lines.append("Search mem0 for details on any of these, or for past decisions and task learnings relevant to the current task.")
 
     return "\n".join(lines)
 

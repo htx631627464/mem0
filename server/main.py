@@ -9,6 +9,7 @@ from auth import ADMIN_API_KEY, AUTH_DISABLED, JWT_SECRET, require_admin, verify
 from config_builder import build_default_config
 from db import SessionLocal
 from dotenv import load_dotenv
+from memory_policy import drop_user_narration
 from errors import (
     UpstreamError,
     install_request_id_logging,
@@ -330,7 +331,9 @@ def add_memory(memory_create: MemoryCreate, _auth=Depends(verify_auth)):
 
     params = {k: v for k, v in memory_create.model_dump().items() if v is not None and k != "messages"}
     try:
-        response = get_memory_instance().add(messages=[m.model_dump() for m in memory_create.messages], **params)
+        memory = get_memory_instance()
+        response = memory.add(messages=[m.model_dump() for m in memory_create.messages], **params)
+        response = drop_user_narration(memory, response)
         if response.get("results"):
             telemetry.log_dashboard_nudge_once(DASHBOARD_URL)
         return JSONResponse(content=response)

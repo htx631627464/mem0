@@ -234,6 +234,10 @@ def format_status(state: dict, source: str, stored: bool, skipped_reason: str = 
 
 
 def main():
+    """Do not snapshot a conversation into long-term memory before compaction."""
+    log.debug("Automatic pre-compaction capture is disabled")
+    return
+
     source = "pre-compaction"
     show_status = False
     for arg in sys.argv[1:]:

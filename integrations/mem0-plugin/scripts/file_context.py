@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _formatting import TYPE_ICONS, format_age
+from _formatting import TYPE_ICONS, format_age, is_stable_memory
 from _identity import resolve_api_key, resolve_user_id
 from _project import resolve_project_id
 from _search import search_memories
@@ -91,11 +91,11 @@ def search_file_context(
     query = f"{rel} {basename}" if rel != basename else rel
     results = search_memories(
         api_key, user_id, project_id, query,
-        top_k=MAX_RESULTS, threshold=0.3,
+        top_k=MAX_RESULTS, threshold=0.45,
         global_search=global_search,
     )
 
-    results = results[:MAX_RESULTS]
+    results = [m for m in results if is_stable_memory(m)][:MAX_RESULTS]
 
     return format_timeline(results, rel)
 

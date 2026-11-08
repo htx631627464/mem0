@@ -156,37 +156,16 @@ if [ -n "$HAS_REMEMBER" ]; then
 fi
 
 if [ -z "$RUBRIC_ALREADY_SHOWN" ]; then
-  _PROMPT_CTX="${_PROMPT_CTX:+${_PROMPT_CTX}\n}Mem0 searches apply when user references past work, decision questions, errors, or non-trivial tasks. Queries use noun-phrases, 2-4 parallel calls with different metadata.type filters, and include user_id + app_id."
+  _PROMPT_CTX="${_PROMPT_CTX:+${_PROMPT_CTX}\n}Search mem0 only when this task depends on a past decision or bug fix. Filter metadata.type to decision or bug_fix, and include user_id + app_id."
   touch "$RUBRIC_FLAG" 2>/dev/null || true
 fi
 
 if [ -n "$HAS_ERROR" ]; then
-  _PROMPT_CTX="${_PROMPT_CTX:+${_PROMPT_CTX}\n}Error detected in prompt. Prior occurrences are available in mem0 via anti_pattern and task_learning type filters."
+  _PROMPT_CTX="${_PROMPT_CTX:+${_PROMPT_CTX}\n}Error detected in prompt. Search mem0 with metadata.type bug_fix if this error has happened before."
 fi
 
 if [ -n "$FILE_PATHS" ]; then
   _PROMPT_CTX="${_PROMPT_CTX:+${_PROMPT_CTX}\n}File paths detected: ${FILE_PATHS}"
-fi
-
-# Auto-capture: directly call mem0 API in background every 3rd message.
-# At MSG_COUNT=3 the 3rd response isn't in the transcript yet (hook fires
-# before Claude responds), so we capture 4 exchanges instead of 3. The
-# overlapping window ensures the next batch (MSG_COUNT=6) picks up the
-# exchange that was incomplete in the previous batch.
-TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // ""' 2>/dev/null || echo "")
-if [ "${MEM0_AUTO_SAVE:-true}" != "false" ] && [ $((MSG_COUNT % 3)) -eq 0 ] && [ "$MSG_COUNT" -gt 0 ] && [ -n "$TRANSCRIPT_PATH" ]; then
-  python3 "$SCRIPT_DIR/auto_capture.py" "$TRANSCRIPT_PATH" 2>/dev/null &
-fi
-
-# Prompt-based nudge as fallback when auto-capture hasn't run yet.
-_ADDS=0
-_STATS_FILE="/tmp/mem0_session_stats_${USER:-default}.json"
-if [ -f "$_STATS_FILE" ]; then
-  _ADDS=$(python3 -c "import json; print(json.load(open('$_STATS_FILE')).get('adds',0))" 2>/dev/null || echo "0")
-fi
-
-if [ "$MSG_COUNT" -ge 3 ] && [ "$_ADDS" -lt "$((MSG_COUNT / 3))" ]; then
-  _PROMPT_CTX="${_PROMPT_CTX:+${_PROMPT_CTX}\n}After responding, store any new decisions, learnings, or preferences from this exchange via add_memory. Keep it to 1 sentence per memory."
 fi
 
 if [ -n "$_PROMPT_CTX" ]; then

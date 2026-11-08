@@ -46,7 +46,7 @@ def search_memories(
     top_k: int = 3,
     min_score: float = 0.0,
     rerank: bool = False,
-    threshold: float = 0.3,
+    threshold: float = 0.45,
     global_search: bool = False,
 ) -> list[dict]:
     if not api_key:

@@ -208,6 +208,15 @@ def store_summary(
 
 
 def main():
+    """Do not store assistant replies as long-term memories.
+
+    The stop hook used to send the last assistant message through
+    infer=True. Extraction rewrote it as a standing user decision,
+    including plans that were later dropped.
+    """
+    log.debug("Automatic session summary capture is disabled")
+    return
+
     api_key = resolve_api_key()
     if not api_key:
         log.debug("MEM0_API_KEY not set, skipping")

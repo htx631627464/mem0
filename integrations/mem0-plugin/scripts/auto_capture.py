@@ -152,6 +152,10 @@ def store_exchange(api_key: str, messages: list[dict], user_id: str,
 
 
 def main():
+    """Do not infer recent chat turns into long-term memories."""
+    log.debug("Automatic exchange capture is disabled")
+    return
+
     api_key = resolve_api_key()
     if not api_key:
         log.debug("MEM0_API_KEY not set, skipping")
