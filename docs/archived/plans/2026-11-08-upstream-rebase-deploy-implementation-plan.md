@@ -1,7 +1,7 @@
 # mem0 官方基底重放 + Bazzite 部署升级 Implementation Plan
 
 **Goal:** 在新分支上以官方 `f1791daa` 为基底重放全部本地补丁并验证，随后升级部署 Bazzite 生产服务并确认存量数据兼容。
-**Spec:** `docs/specs/2026-11-08-upstream-rebase-deploy.md`
+**Spec:** `docs/archived/specs/2026-11-08-upstream-rebase-deploy.md`
 
 ## Spec Traceability
 
